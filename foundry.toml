@@ -1,0 +1,14 @@
+[profile.default]
+src = "src"
+script = "script"
+test = "test/foundry"
+out = "out/foundry"
+solc = "0.8.28"
+libs = ["node_modules", "lib"]
+ffi = true
+remappings = [
+    "forge-std/=node_modules/forge-std/src/",
+]
+
+[rpc_endpoints]
+anvil = "http://127.0.0.1:8545"
