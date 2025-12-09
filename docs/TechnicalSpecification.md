@@ -1,11 +1,5 @@
 # Confidential Transfers: Technical Specification
 
-**Document Version:** 1.0
-**Date:** December 2025
-**Author:** Nox Labs
-
----
-
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -849,7 +843,3 @@ Users can recover their balance using only their Ethereum private key:
 - [SnarkJS Documentation](https://github.com/iden3/snarkjs)
 - [Baby Jubjub Specification](https://eips.ethereum.org/EIPS/eip-2494)
 - [Poseidon Hash](https://www.poseidon-hash.info/)
-
----
-
-**End of Technical Specification**
