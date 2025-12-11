@@ -1,25 +1,27 @@
 import { ethers } from "ethers"
-import { Inputs } from "./modules/inputs.js"
+
+import { SDKOptions } from "./modules/types.js"
+import { confidentialTransfersAbi } from "../artifacts/abi/ConfidentialTransfers.js"
+import { Utils } from "./modules/utils.js"
+import { Params } from "./modules/params.js"
+
+import type { MockERC20 as ERC20 } from "../artifacts/typechain/test/utils/mock/MockERC20.js"
 import type {
   ConfidentialTransfers,
   AccountStruct as Account,
-  PackageStructOutput as Package,
+  PayloadStruct as Payload,
   InitParamsStruct as cInitParams,
   ApplyParamsStruct as cApplyParams,
   UpdateParamsStruct as cUpdateParams,
   TransferParamsStruct as cTransferParams,
 } from "../artifacts/typechain/src/ConfidentialTransfers.js"
-import type { MockERC20 as ERC20 } from "../artifacts/typechain/test/mock/MockERC20.js"
-import { SDKOptions } from "./modules/types.js"
-import { confidentialTransfersAbi } from "../artifacts/abi/ConfidentialTransfers.js"
-import { Utils } from "./modules/utils.js"
 
 export {
   confidentialTransfersAbi,
   ConfidentialTransfers,
   ERC20,
   Account,
-  Package,
+  Payload,
   cInitParams,
   cApplyParams,
   cUpdateParams,
@@ -27,7 +29,7 @@ export {
   Utils,
 }
 
-export class ConfidentialTransfersSDK extends Inputs {
+export class ConfidentialTransfersSDK extends Params {
   constructor(
     tokenAddress: string,
     rpcUrl: string | ethers.ContractRunner,

@@ -11,49 +11,16 @@ import * as path from "path"
 import { ProofOutput } from "../../../packages/sdk/src/modules/types.js"
 import { ConfidentialTransfersSDK } from "../../../packages/sdk/src/index.js"
 
-const { user1, user2, sdk, token, getNonce, setAuditor } =
+const { user1, user2, sdk, token, getNonce } =
   await baseSetupUninitializedUsers()
 
 async function generateAndSaveProofs() {
   if (!fs.existsSync(PROOFS_DIR)) fs.mkdirSync(PROOFS_DIR, { recursive: true })
 
   // --- 1. Init Proof user1 ---
-  {
-    const { cPrivateKey } =
-      await ConfidentialTransfersSDK.deriveConfidentialKeys(
-        BigInt(user1.privateKey)
-      )
-    const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
-    const initProofOutput = await sdk.generateInitProof(initInputs)
-    const filename = getProofFilenameForColdTest(
-      "init",
-      user1.index,
-      await getNonce(user1)
-    )
-    saveProofToFile(filename, initProofOutput)
-    const initParams = sdk.getInitParams(initProofOutput)
-    await token.connect(user1).cInit(initParams)
-  }
-
+  await init(true, user1)
   // --- 2. Init Proof user2 ---
-  {
-    const { cPrivateKey } =
-      await ConfidentialTransfersSDK.deriveConfidentialKeys(
-        BigInt(user2.privateKey)
-      )
-    const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
-    const initProofOutput = await sdk.generateInitProof(initInputs)
-    const filename = getProofFilenameForColdTest(
-      "init",
-      user2.index,
-      await getNonce(user2)
-    )
-    saveProofToFile(filename, initProofOutput)
-    const initParams = sdk.getInitParams(initProofOutput)
-    await token.connect(user2).cInit(initParams)
-  }
-
-  await setAuditor(user1)
+  await init(true, user2)
 
   // --- 3. Deposit Proof user1 ---
   await deposit(true)
@@ -109,7 +76,7 @@ async function generateAndSaveProofs() {
 
         ai.pendingTransfersCommitments[1] = ai.pendingTransfersCommitments[0]
         ai.pendingTransfersAmounts[1] = ai.pendingTransfersAmounts[0]
-        ai.pendingTransfersBF[1] = ai.pendingTransfersBF[0]
+        ai.pendingTransfersOTKs[1] = ai.pendingTransfersOTKs[0]
 
         const applyProofOutput = await sdk.generateApplyProof(ai)
         const applyParams = sdk.getApplyParams(indexes, applyProofOutput)
@@ -146,6 +113,29 @@ async function generateAndSaveProofs() {
   console.log(`\nAll proofs have been generated and saved in '${PROOFS_DIR}'`)
 }
 
+async function init(execute: boolean, user: typeof user1) {
+  const filename = getProofFilenameForColdTest(
+    "init",
+    user.index,
+    await getNonce(user)
+  )
+  if (isFileExists(filename) && !execute) return
+  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+    BigInt(user.privateKey)
+  )
+  const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
+  let initProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    initProofOutput = getProofOutput(filename)
+  } else {
+    initProofOutput = await sdk.generateInitProof(initInputs)
+  }
+  const initParams = sdk.getInitParams(initProofOutput)
+  if (execute) await token.connect(user).cInit(initParams)
+  saveProofToFile(filename, initProofOutput)
+  return initProofOutput
+}
+
 async function transfer(execute: boolean) {
   const filename = getProofFilenameForColdTest(
     "transfer",
@@ -165,7 +155,12 @@ async function transfer(execute: boolean) {
     user2.address,
     TRANSFER_AMOUNT
   )
-  const transferProofOutput = await sdk.generateTransferProof(transferInputs)
+  let transferProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    transferProofOutput = getProofOutput(filename)
+  } else {
+    transferProofOutput = await sdk.generateTransferProof(transferInputs)
+  }
   const transferParams = sdk.getTransferParams(
     user2.address,
     transferProofOutput
@@ -192,7 +187,12 @@ async function deposit(execute: boolean) {
     cPrivateKey,
     DEPOSIT_AMOUNT
   )
-  const depositProofOutput = await sdk.generateUpdateProof(depositInputs)
+  let depositProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    depositProofOutput = getProofOutput(filename)
+  } else {
+    depositProofOutput = await sdk.generateUpdateProof(depositInputs)
+  }
   const depositParams = sdk.getDepositParams(depositProofOutput)
   if (execute) await token.connect(user1).cDeposit(depositParams)
   saveProofToFile(filename, depositProofOutput)
@@ -216,7 +216,12 @@ async function withdraw(execute: boolean) {
     cPrivateKey,
     WITHDRAW_AMOUNT
   )
-  const withdrawProofOutput = await sdk.generateUpdateProof(withdrawInputs)
+  let withdrawProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    withdrawProofOutput = getProofOutput(filename)
+  } else {
+    withdrawProofOutput = await sdk.generateUpdateProof(withdrawInputs)
+  }
   const withdrawParams = sdk.getWithdrawParams(withdrawProofOutput)
   if (execute) await token.connect(user1).cWithdraw(withdrawParams)
   saveProofToFile(filename, withdrawProofOutput)
@@ -239,7 +244,12 @@ async function apply(execute: boolean, indexes: number[]) {
     cPrivateKey,
     indexes
   )
-  const applyProofOutput = await sdk.generateApplyProof(applyInputs)
+  let applyProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    applyProofOutput = getProofOutput(filename)
+  } else {
+    applyProofOutput = await sdk.generateApplyProof(applyInputs)
+  }
   const applyParams = sdk.getApplyParams(indexes, applyProofOutput)
   if (execute) await token.connect(user2).cApply(applyParams)
   saveProofToFile(filename, applyProofOutput)
@@ -264,9 +274,14 @@ async function applyAndTransfer(execute: boolean, indexes: number[]) {
     user1.address,
     TRANSFER_AMOUNT
   )
-  const applyAndTransferProofOutput = await sdk.generateApplyAndTransferProof(
-    applyAndTransferInputs
-  )
+  let applyAndTransferProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    applyAndTransferProofOutput = getProofOutput(filename)
+  } else {
+    applyAndTransferProofOutput = await sdk.generateApplyAndTransferProof(
+      applyAndTransferInputs
+    )
+  }
   const applyAndTransferParams = sdk.getApplyAndTransferParams(
     user1.address,
     indexes,
@@ -290,6 +305,12 @@ function saveProofToFile(filename: string, data: ProofOutput) {
   )
   fs.writeFileSync(filePath, jsonString)
   console.log(`- Saved ${filename}.json`)
+}
+
+function getProofOutput(filename: string): ProofOutput {
+  const filePath = path.join(PROOFS_DIR, `${filename}.json`)
+  const jsonString = fs.readFileSync(filePath, "utf8")
+  return JSON.parse(jsonString)
 }
 
 generateAndSaveProofs().catch((error) => {

@@ -1,11 +1,11 @@
 import { expect } from "chai"
-import { conn, baseSetupWithAuditor } from "../../BaseSetup.js"
+import { conn, baseSetup } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers/cold", function () {
-  let f: Awaited<ReturnType<typeof baseSetupWithAuditor>>
+  let f: Awaited<ReturnType<typeof baseSetup>>
 
   beforeEach(async function () {
-    f = await conn.networkHelpers.loadFixture(baseSetupWithAuditor)
+    f = await conn.networkHelpers.loadFixture(baseSetup)
   })
 
   it("Should able to recover state from on-chain data", async function () {
@@ -21,13 +21,13 @@ describe("ConfidentialTransfers/cold", function () {
       account.state.nonce,
       account.state.eAmount
     )
-    const bf = await f.ConfidentialTransfersSDK.generateBlindingFactor(
+    const otk = await f.ConfidentialTransfersSDK.generateOTK(
       cPrivateKey,
       account.state.nonce
     )
     const commitment = await f.ConfidentialTransfersSDK.generateCommitment(
       amount,
-      bf
+      otk
     )
 
     expect(amount).to.equal(0n)

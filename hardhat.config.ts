@@ -4,17 +4,17 @@ import { defineConfig } from "hardhat/config"
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   solidity: {
-    version: "0.8.28",
+    version: "0.8.30",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1000,
+        runs: 10000,
       },
       viaIR: true,
     },
   },
   paths: {
-    sources: ["./src", "./test/mock"],
+    sources: ["./src", "./test/utils/mock"],
     tests: "./test/hardhat",
     artifacts: "./out/hardhat",
     cache: "./cache/hardhat",

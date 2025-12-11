@@ -275,10 +275,6 @@ export async function baseSetupUninitializedUsers() {
     return proofOutput
   }
 
-  const setAuditor = async (user: BaseWallet) => {
-    await token.connect(user).setAuditor(user.address)
-  }
-
   const getNonce = async (user: BaseWallet) => {
     return (await token.getAccount(user.address)).state.nonce
   }
@@ -344,7 +340,6 @@ export async function baseSetupUninitializedUsers() {
     cTransfer,
     cApply,
     cApplyAndTransfer,
-    setAuditor,
     getFilename,
     getNonce,
     getProofOutput,
@@ -366,11 +361,5 @@ export async function baseSetup() {
     await s.cInit("hot", s.user2)
   }
 
-  return s
-}
-
-export async function baseSetupWithAuditor() {
-  const s = await baseSetup()
-  await s.setAuditor(s.user1)
   return s
 }

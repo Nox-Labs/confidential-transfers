@@ -3,20 +3,19 @@ pragma circom 2.0.0;
 include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/comparators.circom";
 
+include "./modules/utils/CommitmentGenerator.circom";
+
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
-include "./modules/utils/CommitmentGenerator.circom";
 
 template Apply(max) {
     // --- Private Inputs ---
     signal input cPrivateKey;
     signal input oldAmount;
     signal input pendingTransfersAmounts[max];
-    signal input pendingTransfersBF[max];
+    signal input pendingTransfersOTKs[max];
 
     // --- Public Inputs ---
-    signal input auditorPublicKey_X;
-    signal input auditorPublicKey_Y;
     signal input n;
     signal input oldNonce;
     signal input oldCommitment;
@@ -25,17 +24,15 @@ template Apply(max) {
     // --- Public Outputs ---
     signal output newCommitment;
     signal output eAmount;
-    signal output eAmountForAuditor;
 
     component oldStateChecker = OldStateChecker();
-    oldStateChecker.cPrivateKey <== cPrivateKey;
+    oldStateChecker.key <== cPrivateKey;
     oldStateChecker.oldAmount <== oldAmount;
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
-    oldStateChecker.isValid === 1;
 
     component commitmentGenerators[max];
-    component bfGenerator[max];
+    component otkGenerator[max];
     component isLess[max];
     signal intermediateAmount[max+1];
     
@@ -49,7 +46,7 @@ template Apply(max) {
 
         commitmentGenerators[i] = CommitmentGenerator();
         commitmentGenerators[i].amount <== pendingTransfersAmounts[i];
-        commitmentGenerators[i].bf <== pendingTransfersBF[i];
+        commitmentGenerators[i].otk <== pendingTransfersOTKs[i];
         
         // Assertion:
         // (pendingTransfersCommitments[i] - commitmentGenerators[i].out) * isLess[i].out === 0
@@ -64,14 +61,11 @@ template Apply(max) {
     var newNonce = oldNonce + 1;
 
     component newStateGenerator = NewStateGenerator();
-    newStateGenerator.cPrivateKey <== cPrivateKey;
-    newStateGenerator.auditorPublicKey_X <== auditorPublicKey_X;
-    newStateGenerator.auditorPublicKey_Y <== auditorPublicKey_Y;
+    newStateGenerator.key <== cPrivateKey;
     newStateGenerator.newAmount <== newAmount;
     newStateGenerator.newNonce <== newNonce;
     newCommitment <== newStateGenerator.newCommitment;
     eAmount <== newStateGenerator.newEncryptedAmount;
-    eAmountForAuditor <== newStateGenerator.newEncryptedAmountForAuditor;
 }
 
-component main { public [auditorPublicKey_X, auditorPublicKey_Y, n, oldNonce, oldCommitment, pendingTransfersCommitments] } = Apply(10);
+component main { public [n, oldNonce, oldCommitment, pendingTransfersCommitments] } = Apply(10);

@@ -11,8 +11,6 @@ template Update() {
     signal input oldAmount;
 
     // --- Public Inputs ---
-    signal input auditorPublicKey_X;
-    signal input auditorPublicKey_Y;
     signal input operation; // 0 for deposit, 1 for withdraw // TODO: validate underflow 
     signal input amount;
     signal input oldNonce;
@@ -21,7 +19,6 @@ template Update() {
     // --- Public Outputs ---
     signal output newCommitment;
     signal output eAmount;
-    signal output eAmountForAuditor;
 
     // Assert the operation is valid.
     operation * (operation - 1) === 0;
@@ -39,24 +36,20 @@ template Update() {
     operation * (1 - checkRange) === 0;
 
     component oldStateChecker = OldStateChecker();
-    oldStateChecker.cPrivateKey <== cPrivateKey;
+    oldStateChecker.key <== cPrivateKey;
     oldStateChecker.oldAmount <== oldAmount;
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
-    oldStateChecker.isValid === 1;
 
     var newNonce = oldNonce + 1;
     var newAmount = oldAmount + (1 - 2*operation) * amount;
 
     component newStateGenerator = NewStateGenerator();
-    newStateGenerator.cPrivateKey <== cPrivateKey;
-    newStateGenerator.auditorPublicKey_X <== auditorPublicKey_X;
-    newStateGenerator.auditorPublicKey_Y <== auditorPublicKey_Y;
+    newStateGenerator.key <== cPrivateKey;
     newStateGenerator.newAmount <== newAmount;
     newStateGenerator.newNonce <== newNonce;
     newCommitment <== newStateGenerator.newCommitment;
     eAmount <== newStateGenerator.newEncryptedAmount;
-    eAmountForAuditor <== newStateGenerator.newEncryptedAmountForAuditor;
 }
 
-component main {public [auditorPublicKey_X, auditorPublicKey_Y, operation, amount, oldNonce, oldCommitment]} = Update();
+component main {public [operation, amount, oldNonce, oldCommitment]} = Update();

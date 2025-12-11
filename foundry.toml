@@ -3,9 +3,12 @@ src = "src"
 script = "script"
 test = "test/foundry"
 out = "out/foundry"
-solc = "0.8.28"
+solc = "0.8.30"
 libs = ["node_modules", "lib"]
 ffi = true
+via_ir = true
+optimizer = true
+optimizer_runs = 10000
 remappings = [
     "forge-std/=node_modules/forge-std/src/",
 ]

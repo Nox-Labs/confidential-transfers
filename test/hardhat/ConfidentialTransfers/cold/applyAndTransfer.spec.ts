@@ -1,12 +1,12 @@
-import { baseSetupWithAuditor, conn } from "../../BaseSetup.js"
+import { baseSetup, conn } from "../../BaseSetup.js"
 import { expect } from "chai"
 import type { ProofOutput } from "../../../../packages/sdk/src/modules/types.js"
 
 describe("ConfidentialTransfers/cold", function () {
-  let f: Awaited<ReturnType<typeof baseSetupWithAuditor>>
+  let f: Awaited<ReturnType<typeof baseSetup>>
 
   beforeEach(async function () {
-    f = await conn.networkHelpers.loadFixture(baseSetupWithAuditor)
+    f = await conn.networkHelpers.loadFixture(baseSetup)
 
     await f.cDeposit("cold", f.user1, f.DEPOSIT_AMOUNT)
 
@@ -33,11 +33,6 @@ describe("ConfidentialTransfers/cold", function () {
     it("Should update encrypted amount", async function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
       expect(accountAfter.state.eAmount).to.equal(proof.pubSignals[1])
-    })
-
-    it("Should update auditor's encrypted amount", async function () {
-      const accountAfter = await f.token.getAccount(f.user2.address)
-      expect(accountAfter.state.eAmountForAuditor).to.equal(proof.pubSignals[2])
     })
 
     it("Should update nonce", async function () {
@@ -80,11 +75,11 @@ describe("ConfidentialTransfers/cold", function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
 
       expect(accountAfter.pendingTransfers.length).to.equal(2)
-      expect(accountAfter.pendingTransfers[0].commitment).to.equal(
-        accountBefore.pendingTransfers[2].commitment
+      expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[2].payload.commitment
       )
-      expect(accountAfter.pendingTransfers[1].commitment).to.equal(
-        accountBefore.pendingTransfers[1].commitment
+      expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[1].payload.commitment
       )
     })
 
@@ -100,11 +95,11 @@ describe("ConfidentialTransfers/cold", function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
 
       expect(accountAfter.pendingTransfers.length).to.equal(2)
-      expect(accountAfter.pendingTransfers[0].commitment).to.equal(
-        accountBefore.pendingTransfers[0].commitment
+      expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[0].payload.commitment
       )
-      expect(accountAfter.pendingTransfers[1].commitment).to.equal(
-        accountBefore.pendingTransfers[2].commitment
+      expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[2].payload.commitment
       )
     })
 
@@ -120,11 +115,11 @@ describe("ConfidentialTransfers/cold", function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
 
       expect(accountAfter.pendingTransfers.length).to.equal(2)
-      expect(accountAfter.pendingTransfers[0].commitment).to.equal(
-        accountBefore.pendingTransfers[0].commitment
+      expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[0].payload.commitment
       )
-      expect(accountAfter.pendingTransfers[1].commitment).to.equal(
-        accountBefore.pendingTransfers[1].commitment
+      expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[1].payload.commitment
       )
     })
 
@@ -140,8 +135,8 @@ describe("ConfidentialTransfers/cold", function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
 
       expect(accountAfter.pendingTransfers.length).to.equal(1)
-      expect(accountAfter.pendingTransfers[0].commitment).to.equal(
-        accountBefore.pendingTransfers[2].commitment
+      expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[2].payload.commitment
       )
 
       expect(
@@ -161,8 +156,8 @@ describe("ConfidentialTransfers/cold", function () {
       const accountAfter = await f.token.getAccount(f.user2.address)
 
       expect(accountAfter.pendingTransfers.length).to.equal(1)
-      expect(accountAfter.pendingTransfers[0].commitment).to.equal(
-        accountBefore.pendingTransfers[1].commitment
+      expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
+        accountBefore.pendingTransfers[1].payload.commitment
       )
 
       expect(

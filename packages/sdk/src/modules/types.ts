@@ -5,17 +5,15 @@ export type ProofOutput = {
   pubSignals: BigNumberish[]
 }
 
-export type CircuitInitInputs = CPrivateKey & AuditorPublicKeys
+export type CircuitInitInputs = CPrivateKey
 
 export type CircuitUpdateInputs = CPrivateKey &
-  AuditorPublicKeys &
   OldState & {
     operation: bigint
     amount: bigint
   }
 
 export type CircuitTransferInputs = CPrivateKey &
-  AuditorPublicKeys &
   OldState & {
     transferAmount: bigint
     recipientPublicKey_X: bigint
@@ -23,10 +21,9 @@ export type CircuitTransferInputs = CPrivateKey &
   }
 
 export type CircuitApplyInputs = CPrivateKey &
-  AuditorPublicKeys &
   OldState & {
     pendingTransfersAmounts: bigint[]
-    pendingTransfersBF: bigint[]
+    pendingTransfersOTKs: bigint[]
     n: bigint
     pendingTransfersCommitments: bigint[]
   }
@@ -39,6 +36,7 @@ export type CircuitInputs =
   | CircuitUpdateInputs
   | CircuitTransferInputs
   | CircuitApplyInputs
+  | CircuitApplyAndTransferInputs
 
 export type SDKOptions = {
   paths: {
@@ -55,9 +53,4 @@ type OldState = {
   oldAmount: bigint
   oldNonce: bigint
   oldCommitment: bigint
-}
-
-type AuditorPublicKeys = {
-  auditorPublicKey_X: bigint
-  auditorPublicKey_Y: bigint
 }

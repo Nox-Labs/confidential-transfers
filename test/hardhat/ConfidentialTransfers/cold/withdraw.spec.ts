@@ -1,12 +1,12 @@
 import { expect } from "chai"
 
-import { baseSetupWithAuditor, conn } from "../../BaseSetup.js"
+import { baseSetup, conn } from "../../BaseSetup.js"
 import type { AccountStruct } from "../../../../out/hardhat/typechain/src/ConfidentialTransfers.js"
 import type { ProofOutput } from "../../../../packages/sdk/src/modules/types.js"
 
 describe("ConfidentialTransfers/cold", function () {
   describe("cWithdraw()", function () {
-    let f: Awaited<ReturnType<typeof baseSetupWithAuditor>>
+    let f: Awaited<ReturnType<typeof baseSetup>>
 
     let accountBefore: AccountStruct
     let accountAfter: AccountStruct
@@ -14,7 +14,7 @@ describe("ConfidentialTransfers/cold", function () {
     let proof: ProofOutput
 
     beforeEach(async function () {
-      f = await conn.networkHelpers.loadFixture(baseSetupWithAuditor)
+      f = await conn.networkHelpers.loadFixture(baseSetup)
 
       await f.cDeposit("cold", f.user1, f.DEPOSIT_AMOUNT)
 
@@ -31,10 +31,6 @@ describe("ConfidentialTransfers/cold", function () {
 
     it("Should update encrypted amount", async function () {
       expect(accountAfter.state.eAmount).to.equal(proof.pubSignals[1])
-    })
-
-    it("Should update auditor's encrypted amount", async function () {
-      expect(accountAfter.state.eAmountForAuditor).to.equal(proof.pubSignals[2])
     })
 
     it("Should update nonce", async function () {

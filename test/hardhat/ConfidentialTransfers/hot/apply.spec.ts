@@ -44,15 +44,11 @@ describe("ConfidentialTransfers/hot", function () {
 
       const newCommitment = params.artifacts.outputs[0]
       const newEncryptedAmount = params.artifacts.outputs[1]
-      const newEncryptedAmountForAuditor = params.artifacts.outputs[2]
 
       const accountData = await token.getAccount(user2.address)
       expect(accountData.state.nonce).to.equal(1n)
       expect(accountData.state.commitment).to.equal(newCommitment)
       expect(accountData.state.eAmount).to.equal(newEncryptedAmount)
-      expect(accountData.state.eAmountForAuditor).to.equal(
-        newEncryptedAmountForAuditor
-      )
       expect(accountData.pendingTransfers.length).to.equal(0)
     }).timeout(50000)
   })

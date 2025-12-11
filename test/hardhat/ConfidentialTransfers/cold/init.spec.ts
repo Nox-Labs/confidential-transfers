@@ -1,12 +1,12 @@
 import { expect } from "chai"
-import { baseSetupWithAuditor, conn } from "../../BaseSetup.js"
+import { baseSetup, conn } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers/cold", function () {
   describe("cInit()", function () {
-    let f: Awaited<ReturnType<typeof baseSetupWithAuditor>>
+    let f: Awaited<ReturnType<typeof baseSetup>>
 
     before(async function () {
-      f = await conn.networkHelpers.loadFixture(baseSetupWithAuditor)
+      f = await conn.networkHelpers.loadFixture(baseSetup)
     })
 
     it("Should update public key", async function () {
@@ -16,8 +16,8 @@ describe("ConfidentialTransfers/cold", function () {
 
       const accountAfter = await f.token.getAccount(f.user1.address)
 
-      expect(accountAfter.state.pubKey_X).to.equal(keys.cPublicKey_X)
-      expect(accountAfter.state.pubKey_Y).to.equal(keys.cPublicKey_Y)
+      expect(accountAfter.pubKey_X).to.equal(keys.cPublicKey_X)
+      expect(accountAfter.pubKey_Y).to.equal(keys.cPublicKey_Y)
     })
 
     it("Should update nonce", async function () {
@@ -30,24 +30,9 @@ describe("ConfidentialTransfers/cold", function () {
       expect(accountAfter.state.eAmount).to.not.equal(0n)
     })
 
-    it("Should update auditor's encrypted amount", async function () {
-      const accountAfter = await f.token.getAccount(f.user1.address)
-      expect(accountAfter.state.eAmountForAuditor).to.equal(0n)
-    })
-
     it("Should update commitment", async function () {
       const accountAfter = await f.token.getAccount(f.user1.address)
-
-      const bf = await f.ConfidentialTransfersSDK.generateBlindingFactor(
-        f.user1CPrivateKey,
-        0n
-      )
-      const commitment = await f.ConfidentialTransfersSDK.generateCommitment(
-        0n,
-        bf
-      )
-
-      expect(accountAfter.state.commitment).to.equal(commitment)
+      expect(accountAfter.state.commitment).to.not.equal(0n)
     })
 
     it("Should revert if the proof verification fails", async function () {

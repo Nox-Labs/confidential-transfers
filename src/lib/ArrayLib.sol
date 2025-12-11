@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {IConfidentialTransfers, Package} from "../interface/IConfidentialTransfers.sol";
+import {IConfidentialTransfers, PendingTransfer, AuditReport} from "../interface/IConfidentialTransfers.sol";
 
 library ArrayLib {
     error DuplicateIndex();
@@ -13,7 +13,7 @@ library ArrayLib {
         }
     }
 
-    function removeByIndices(Package[] storage self, uint256[] memory indicesToRemove) internal {
+    function removeByIndices(PendingTransfer[] storage self, uint256[] memory indicesToRemove) internal {
         assertUnique(indicesToRemove, self.length);
 
         uint256 len = self.length;
@@ -53,3 +53,33 @@ library ArrayLib {
         }
     }
 }
+
+// function copy(AuditReport[] storage self, AuditReport[] calldata data) internal {
+//     assembly {
+//         let oldLen := sload(self.slot)
+//         let newLen := data.length
+
+//         sstore(self.slot, newLen)
+
+//         mstore(0, self.slot)
+//         let startSlot := keccak256(0, 0x20)
+
+//         for { let i := 0 } lt(i, newLen) { i := add(i, 1) } {
+//             let offset := add(data.offset, mul(i, 0x40))
+//             let val1 := calldataload(offset)
+//             let val2 := calldataload(add(offset, 0x20))
+
+//             let itemSlot := add(startSlot, mul(i, 2))
+//             sstore(itemSlot, val1)
+//             sstore(add(itemSlot, 1), val2)
+//         }
+
+//         if gt(oldLen, newLen) {
+//             for { let i := newLen } lt(i, oldLen) { i := add(i, 1) } {
+//                 let itemSlot := add(startSlot, mul(i, 2))
+//                 sstore(itemSlot, 0)
+//                 sstore(add(itemSlot, 1), 0)
+//             }
+//         }
+//     }
+// }

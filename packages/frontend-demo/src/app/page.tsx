@@ -110,11 +110,10 @@ export default function Home() {
       // Extract all state fields
       const state = {
         nonce: data.state.nonce.toString(),
-        pubKey_X: data.state.pubKey_X.toString(),
-        pubKey_Y: data.state.pubKey_Y.toString(),
+        pubKey_X: data.pubKey_X.toString(),
+        pubKey_Y: data.pubKey_Y.toString(),
         commitment: data.state.commitment.toString(),
         eAmount: data.state.eAmount.toString(),
-        eAmountForAuditor: data.state.eAmountForAuditor.toString(),
       }
 
       // Format pending transfers
@@ -124,7 +123,6 @@ export default function Home() {
         pubKey_Y: pt.pubKey_Y.toString(),
         commitment: pt.commitment.toString(),
         eAmount: pt.eAmount.toString(),
-        eAmountForAuditor: pt.eAmountForAuditor.toString(),
       }))
 
       setAccountState({
@@ -219,11 +217,10 @@ export default function Home() {
         state: {
           ...accountData.state,
           nonce: accountData.state.nonce.toString(),
-          pubKey_X: accountData.state.pubKey_X.toString(),
-          pubKey_Y: accountData.state.pubKey_Y.toString(),
+          pubKey_X: accountData.pubKey_X.toString(),
+          pubKey_Y: accountData.pubKey_Y.toString(),
           commitment: accountData.state.commitment.toString(),
           eAmount: accountData.state.eAmount.toString(),
-          eAmountForAuditor: accountData.state.eAmountForAuditor.toString(),
         },
         pendingTransfers: [],
       }
@@ -236,19 +233,19 @@ export default function Home() {
             BigInt(accountData.state.nonce),
             BigInt(accountData.state.eAmount)
           )
-          const bf = await ConfidentialTransfersSDK.generateBlindingFactor(
+          const otk = await ConfidentialTransfersSDK.generateOTK(
             keys.cPrivateKey,
             BigInt(accountData.state.nonce)
           )
           const commitment = await ConfidentialTransfersSDK.generateCommitment(
             amount,
-            bf
+            otk
           )
 
           decrypted.state.decryptedAmount = (
             amount / BigInt(10 ** 18)
           ).toString()
-          decrypted.state.blindingFactor = bf.toString()
+          decrypted.state.otk = otk.toString()
           decrypted.state.calculatedCommitment = commitment.toString()
           decrypted.state.commitmentMatches =
             commitment.toString() === accountData.state.commitment.toString()
@@ -257,6 +254,10 @@ export default function Home() {
         }
       }
 
+      const { pubKey_Xs, pubKey_Ys } = await contract!.getCPublicKeys(
+        accountData.pendingTransfers.map((pt: any) => pt.sender)
+      )
+
       // Decrypt pending transfers
       for (let i = 0; i < accountData.pendingTransfers.length; i++) {
         const pt = accountData.pendingTransfers[i]
@@ -264,47 +265,45 @@ export default function Home() {
           // Derive shared key with sender
           const sharedKey = await ConfidentialTransfersSDK.deriveSharedKey(
             keys.cPrivateKey,
-            BigInt(pt.pubKey_X),
-            BigInt(pt.pubKey_Y)
+            BigInt(pubKey_Xs[i]),
+            BigInt(pubKey_Ys[i])
           )
           const amount = await ConfidentialTransfersSDK.decryptAmount(
             sharedKey,
-            BigInt(pt.nonce),
-            BigInt(pt.eAmount)
+            BigInt(pt.payload.nonce),
+            BigInt(pt.payload.eAmount)
           )
-          const bf = await ConfidentialTransfersSDK.generateBlindingFactor(
+          const otk = await ConfidentialTransfersSDK.generateOTK(
             sharedKey,
-            BigInt(pt.nonce)
+            BigInt(pt.payload.nonce)
           )
           const commitment = await ConfidentialTransfersSDK.generateCommitment(
             amount,
-            bf
+            otk
           )
 
           decrypted.pendingTransfers.push({
             index: i,
-            nonce: pt.nonce.toString(),
-            pubKey_X: pt.pubKey_X.toString(),
-            pubKey_Y: pt.pubKey_Y.toString(),
-            commitment: pt.commitment.toString(),
-            eAmount: pt.eAmount.toString(),
-            eAmountForAuditor: pt.eAmountForAuditor.toString(),
+            nonce: pt.payload.nonce.toString(),
+            pubKey_X: pubKey_Xs[i].toString(),
+            pubKey_Y: pubKey_Ys[i].toString(),
+            commitment: pt.payload.commitment.toString(),
+            eAmount: pt.payload.eAmount.toString(),
             decryptedAmount: (amount / BigInt(10 ** 18)).toString(),
-            blindingFactor: bf.toString(),
+            otk: otk.toString(),
             calculatedCommitment: commitment.toString(),
             commitmentMatches:
-              commitment.toString() === pt.commitment.toString(),
+              commitment.toString() === pt.payload.commitment.toString(),
           })
         } catch (e) {
           console.error(`Failed to decrypt pending transfer ${i}:`, e)
           decrypted.pendingTransfers.push({
             index: i,
-            nonce: pt.nonce.toString(),
-            pubKey_X: pt.pubKey_X.toString(),
-            pubKey_Y: pt.pubKey_Y.toString(),
-            commitment: pt.commitment.toString(),
-            eAmount: pt.eAmount.toString(),
-            eAmountForAuditor: pt.eAmountForAuditor.toString(),
+            nonce: pt.payload.nonce.toString(),
+            pubKey_X: pubKey_Xs[i].toString(),
+            pubKey_Y: pubKey_Ys[i].toString(),
+            commitment: pt.payload.commitment.toString(),
+            eAmount: pt.payload.eAmount.toString(),
             error: "Failed to decrypt",
           })
         }
