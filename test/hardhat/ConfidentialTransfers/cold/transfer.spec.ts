@@ -59,14 +59,15 @@ describe("ConfidentialTransfers/cold", function () {
         )
         const proof = f.getProofOutput(proofFilename)
 
-        const stateAuditorReports = await f.sdk.createAuditReport(
+        const stateAuditorReports = await f.sdk.createStateAuditReport(
           f.user1CPrivateKey,
           nonce,
           [f.user2.address]
         )
-        const transferAuditorReports = await f.sdk.createAuditReport(
+        const transferAuditorReports = await f.sdk.createTransferAuditReport(
           f.user1CPrivateKey,
           nonce,
+          f.user2.address,
           [f.user2.address]
         )
         const params = f.sdk.getTransferParams(

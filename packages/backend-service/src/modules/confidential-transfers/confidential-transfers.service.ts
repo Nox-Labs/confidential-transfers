@@ -27,7 +27,10 @@ export class ConfidentialTransfersService {
     await this.validateSignature(dto.userId, dto.signature)
     const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
-    return await this.proofsService.generateInitProof(keys.cPrivateKey)
+    return await this.proofsService.generateInitProof(
+      keys.cPrivateKey,
+      dto.auditors
+    )
   }
 
   async getDepositParams(dto: DepositDto) {
@@ -37,7 +40,8 @@ export class ConfidentialTransfersService {
     return await this.proofsService.generateDepositProof(
       keys.cPrivateKey,
       dto.userId,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
@@ -49,7 +53,8 @@ export class ConfidentialTransfersService {
       keys.cPrivateKey,
       dto.userId,
       dto.to,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
@@ -60,7 +65,8 @@ export class ConfidentialTransfersService {
     return await this.proofsService.generateWithdrawProof(
       keys.cPrivateKey,
       dto.userId,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
@@ -71,7 +77,8 @@ export class ConfidentialTransfersService {
     return await this.proofsService.generateApplyProof(
       keys.cPrivateKey,
       dto.userId,
-      dto.pendingTransfersIndexes
+      dto.pendingTransfersIndexes,
+      dto.auditors
     )
   }
 
@@ -84,7 +91,8 @@ export class ConfidentialTransfersService {
       dto.userId,
       dto.pendingTransfersIndexes,
       dto.to,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 

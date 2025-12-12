@@ -53,7 +53,7 @@ describe("ConfidentialTransfers:cold", function () {
           await f.getNonce(f.user2)
         )
         const proof = f.getProofOutput(filename)
-        const auditorReports = await f.sdk.createAuditReport(
+        const auditorReports = await f.sdk.createStateAuditReport(
           f.user2CPrivateKey,
           await f.getNonce(f.user2),
           [f.user1.address]

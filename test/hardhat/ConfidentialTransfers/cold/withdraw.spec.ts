@@ -64,7 +64,7 @@ describe("ConfidentialTransfers:cold", function () {
           f.WITHDRAW_AMOUNT
         )
         const proof = f.getProofOutput(proofFilename)
-        const auditorReports = await f.sdk.createAuditReport(
+        const auditorReports = await f.sdk.createStateAuditReport(
           f.user1CPrivateKey,
           nonce,
           [f.user2.address]

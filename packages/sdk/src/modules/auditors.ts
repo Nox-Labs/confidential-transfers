@@ -3,12 +3,48 @@ import { Payload } from "../index.js"
 import { Inputs } from "./inputs.js"
 
 export class Auditors extends Inputs {
-  async createAuditReport(
+  async createStateAuditReport(
     cPrivateKey: bigint,
     nonce: bigint,
     auditorAddresses: string[]
   ): Promise<AuditReportStruct[]> {
     const otk = await Inputs.generateOTK(cPrivateKey, nonce)
+    return await this.createAuditReport(
+      cPrivateKey,
+      otk,
+      nonce,
+      auditorAddresses
+    )
+  }
+
+  async createTransferAuditReport(
+    cPrivateKey: bigint,
+    nonce: bigint,
+    recipientAddress: string,
+    auditorAddresses: string[]
+  ): Promise<AuditReportStruct[]> {
+    const { pubKey_X, pubKey_Y } = await this.token.getAccount(recipientAddress)
+
+    const sharedKey = await Inputs.deriveSharedKey(
+      cPrivateKey,
+      pubKey_X,
+      pubKey_Y
+    )
+    const otk = await Inputs.generateOTK(sharedKey, nonce)
+    return await this.createAuditReport(
+      cPrivateKey,
+      otk,
+      nonce,
+      auditorAddresses
+    )
+  }
+
+  private async createAuditReport(
+    cPrivateKey: bigint,
+    otk: bigint,
+    nonce: bigint,
+    auditorAddresses: string[]
+  ): Promise<AuditReportStruct[]> {
     const { pubKey_Xs, pubKey_Ys } = await this.token.getCPublicKeys(
       auditorAddresses
     )
@@ -31,13 +67,11 @@ export class Auditors extends Inputs {
 
   async decryptAuditReport(
     cPrivateKey: bigint,
-    reportCreatorAddress: string,
-    auditReport: AuditReportStruct,
+    senderAddress: string,
+    eOTK: bigint,
     payload: Payload
   ): Promise<bigint> {
-    const { pubKey_X, pubKey_Y } = await this.token.getAccount(
-      reportCreatorAddress
-    )
+    const { pubKey_X, pubKey_Y } = await this.token.getAccount(senderAddress)
     const sharedKey = await Inputs.deriveSharedKey(
       cPrivateKey,
       pubKey_X,
@@ -46,9 +80,8 @@ export class Auditors extends Inputs {
     const otk = await Inputs.decipher(
       sharedKey,
       BigInt(payload.nonce),
-      BigInt(auditReport.eOTK)
+      BigInt(eOTK)
     )
-
     const amount = await Inputs.decipher(
       otk,
       BigInt(payload.nonce),

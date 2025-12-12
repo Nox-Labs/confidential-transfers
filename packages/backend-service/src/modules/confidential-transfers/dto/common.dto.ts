@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsNumberString } from "class-validator"
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumberString,
+  IsArray,
+  IsOptional,
+} from "class-validator"
 
 export class UserIdDto {
   @IsString()
@@ -10,4 +16,9 @@ export class CommonDto extends UserIdDto {
   @IsString()
   @IsNotEmpty()
   signature: string
+
+  @IsArray()
+  @IsOptional()
+  @IsString({ each: true })
+  auditors?: string[]
 }
