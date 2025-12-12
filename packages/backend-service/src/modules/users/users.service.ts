@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { UsersRepository } from "./users.repository"
 import { ethers } from "ethers"
-import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 @Injectable()
 export class UsersService {
@@ -12,7 +11,6 @@ export class UsersService {
     if (existingEntropy) return existingEntropy
 
     // This is only for demo purposes, in production we should generate random entropy
-
     const entropyString = ethers.hexlify(userId)
 
     await this.usersRepository.save({

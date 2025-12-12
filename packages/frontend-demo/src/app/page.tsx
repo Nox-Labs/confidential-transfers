@@ -116,17 +116,27 @@ export default function Home() {
         eAmount: data.state.eAmount.toString(),
       }
 
+      // Format audit reports
+      const auditReports = data.auditReports.map((ar: any) => ({
+        auditor: ar.auditor,
+        encryptedOTK: ar.encryptedOTK.toString(),
+      }))
+
       // Format pending transfers
       const pendingTransfers = data.pendingTransfers.map((pt: any) => ({
-        nonce: pt.nonce.toString(),
-        pubKey_X: pt.pubKey_X.toString(),
-        pubKey_Y: pt.pubKey_Y.toString(),
-        commitment: pt.commitment.toString(),
-        eAmount: pt.eAmount.toString(),
+        sender: pt.sender,
+        nonce: pt.package.nonce.toString(),
+        commitment: pt.package.commitment.toString(),
+        eAmount: pt.package.eAmount.toString(),
+        auditReports: pt.auditReports.map((ar: any) => ({
+          auditor: ar.auditor,
+          encryptedOTK: ar.encryptedOTK.toString(),
+        })),
       }))
 
       setAccountState({
         state,
+        auditReports,
         pendingTransfers,
         pendingCount: pendingTransfers.length,
       })
@@ -738,11 +748,39 @@ export default function Home() {
                           </div>
                           <div>
                             <span className="text-gray-500">
-                              Encrypted (Auditor):
+                              Audit Reports:
                             </span>
-                            <div className="font-mono text-yellow-400 break-all bg-gray-900 p-1 rounded text-xs">
-                              {accountState.state.eAmountForAuditor}
-                            </div>
+                            {accountState.auditReports?.length > 0 ? (
+                              <div className="space-y-1 mt-1">
+                                {accountState.auditReports.map(
+                                  (ar: any, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      className="bg-gray-900 p-1 rounded text-[10px] border border-gray-700"
+                                    >
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">
+                                          Aud:
+                                        </span>
+                                        <span className="font-mono text-gray-300">
+                                          {ar.auditor.slice(0, 6)}...
+                                        </span>
+                                      </div>
+                                      <div
+                                        className="font-mono text-purple-400 truncate"
+                                        title={ar.encryptedOTK}
+                                      >
+                                        {ar.encryptedOTK.slice(0, 10)}...
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <div className="font-mono text-gray-500 text-xs">
+                                None
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -865,8 +903,8 @@ export default function Home() {
                                           From:{" "}
                                         </span>
                                         <span className="font-mono text-blue-400">
-                                          {pt.pubKey_X.slice(0, 10)}...
-                                          {pt.pubKey_X.slice(-8)}
+                                          {pt.sender.slice(0, 6)}...
+                                          {pt.sender.slice(-4)}
                                         </span>
                                       </div>
                                       <div className="text-xs">
