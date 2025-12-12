@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { UsersRepository } from "./users.repository"
 import { ethers } from "ethers"
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 @Injectable()
 export class UsersService {

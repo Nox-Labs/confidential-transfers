@@ -9,7 +9,7 @@ import { baseSetupUninitializedUsers } from "../../hardhat/BaseSetup.js"
 import * as fs from "fs"
 import * as path from "path"
 import { ProofOutput } from "../../../packages/sdk/src/modules/types.js"
-import { ConfidentialTransfersSDK } from "../../../packages/sdk/src/index.js"
+import { SDK } from "../../../packages/sdk/src/index.js"
 
 const { user1, user2, sdk, token, getNonce } =
   await baseSetupUninitializedUsers()
@@ -64,10 +64,9 @@ async function generateAndSaveProofs() {
         indexes
       )
       if (!isFileExists(filename) || execute) {
-        const { cPrivateKey } =
-          await ConfidentialTransfersSDK.deriveConfidentialKeys(
-            BigInt(user2.privateKey)
-          )
+        const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+          BigInt(user2.privateKey)
+        )
         const ai = await sdk.getCircuitInputsForApply(
           user2.address,
           cPrivateKey,
@@ -120,7 +119,7 @@ async function init(execute: boolean, user: typeof user1) {
     await getNonce(user)
   )
   if (isFileExists(filename) && !execute) return
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user.privateKey)
   )
   const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
@@ -146,7 +145,7 @@ async function transfer(execute: boolean) {
 
   if (isFileExists(filename) && !execute) return
 
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user1.privateKey)
   )
   const transferInputs = await sdk.getCircuitInputsForTransfer(
@@ -179,7 +178,7 @@ async function deposit(execute: boolean) {
 
   if (isFileExists(filename) && !execute) return
 
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user1.privateKey)
   )
   const depositInputs = await sdk.getCircuitInputsForDeposit(
@@ -208,7 +207,7 @@ async function withdraw(execute: boolean) {
 
   if (isFileExists(filename) && !execute) return
 
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user1.privateKey)
   )
   const withdrawInputs = await sdk.getCircuitInputsForWithdraw(
@@ -236,7 +235,7 @@ async function apply(execute: boolean, indexes: number[]) {
     indexes
   )
   if (isFileExists(filename) && !execute) return
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user2.privateKey)
   )
   const applyInputs = await sdk.getCircuitInputsForApply(
@@ -264,7 +263,7 @@ async function applyAndTransfer(execute: boolean, indexes: number[]) {
     indexes
   )
   if (isFileExists(filename) && !execute) return
-  const { cPrivateKey } = await ConfidentialTransfersSDK.deriveConfidentialKeys(
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
     BigInt(user2.privateKey)
   )
   const applyAndTransferInputs = await sdk.getCircuitInputsForApplyAndTransfer(

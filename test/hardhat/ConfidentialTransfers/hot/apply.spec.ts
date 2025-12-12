@@ -11,7 +11,7 @@ describe("ConfidentialTransfers/hot", function () {
         INITIAL_BALANCE,
         cDeposit,
         sdk,
-        ConfidentialTransfersSDK,
+        SDK,
         cTransfer,
       } = await conn.networkHelpers.loadFixture(baseSetup)
 
@@ -23,10 +23,9 @@ describe("ConfidentialTransfers/hot", function () {
 
       const pendingTransfersIndexes = [0]
 
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user2.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user2.privateKey)
+      )
       const applyInputs = await sdk.getCircuitInputsForApply(
         user2.address,
         cPrivateKey,

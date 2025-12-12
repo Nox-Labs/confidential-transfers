@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { ethers } from "ethers"
 import {
   ConfidentialTransfers,
-  ConfidentialTransfersSDK,
+  SDK,
   ERC20,
   cInitParams,
   confidentialTransfersAbi,
@@ -209,9 +209,7 @@ export default function Home() {
       // Derive cPrivateKey from signature (same as backend)
       // Backend uses BigInt(signature) directly, so we need to convert hex string to BigInt
       const entropyForKeys = BigInt(sig)
-      const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-        entropyForKeys
-      )
+      const keys = await SDK.deriveConfidentialKeys(entropyForKeys)
 
       const decrypted: any = {
         state: {
@@ -228,19 +226,16 @@ export default function Home() {
       // Decrypt state amount
       if (BigInt(accountData.state.commitment) !== BigInt(0)) {
         try {
-          const amount = await ConfidentialTransfersSDK.decryptAmount(
+          const amount = await SDK.decryptAmount(
             keys.cPrivateKey,
             BigInt(accountData.state.nonce),
             BigInt(accountData.state.eAmount)
           )
-          const otk = await ConfidentialTransfersSDK.generateOTK(
+          const otk = await SDK.generateOTK(
             keys.cPrivateKey,
             BigInt(accountData.state.nonce)
           )
-          const commitment = await ConfidentialTransfersSDK.generateCommitment(
-            amount,
-            otk
-          )
+          const commitment = await SDK.generateCommitment(amount, otk)
 
           decrypted.state.decryptedAmount = (
             amount / BigInt(10 ** 18)
@@ -263,24 +258,18 @@ export default function Home() {
         const pt = accountData.pendingTransfers[i]
         try {
           // Derive shared key with sender
-          const sharedKey = await ConfidentialTransfersSDK.deriveSharedKey(
+          const sharedKey = await SDK.deriveSharedKey(
             keys.cPrivateKey,
             BigInt(pubKey_Xs[i]),
             BigInt(pubKey_Ys[i])
           )
-          const amount = await ConfidentialTransfersSDK.decryptAmount(
+          const amount = await SDK.decryptAmount(
             sharedKey,
             BigInt(pt.payload.nonce),
             BigInt(pt.payload.eAmount)
           )
-          const otk = await ConfidentialTransfersSDK.generateOTK(
-            sharedKey,
-            BigInt(pt.payload.nonce)
-          )
-          const commitment = await ConfidentialTransfersSDK.generateCommitment(
-            amount,
-            otk
-          )
+          const otk = await SDK.generateOTK(sharedKey, BigInt(pt.payload.nonce))
+          const commitment = await SDK.generateCommitment(amount, otk)
 
           decrypted.pendingTransfers.push({
             index: i,

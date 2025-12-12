@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 @Injectable()
 export class ProofsService implements OnModuleInit {
-  sdk: ConfidentialTransfersSDK
+  sdk: SDK
 
   constructor(private configService: ConfigService) {}
 
@@ -16,7 +16,7 @@ export class ProofsService implements OnModuleInit {
       this.configService.get<string>("proofsHelpersPath")
     const proofsKeysPath = this.configService.get<string>("proofsKeysPath")
 
-    this.sdk = new ConfidentialTransfersSDK(contractAddress, rpcUrl, {
+    this.sdk = new SDK(contractAddress, rpcUrl, {
       paths: {
         helpers: proofsHelpersPath,
         keys: proofsKeysPath,

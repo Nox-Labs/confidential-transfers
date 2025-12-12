@@ -4,13 +4,11 @@ import { baseSetup, conn } from "../../BaseSetup.js"
 describe("ConfidentialTransfers/hot", function () {
   describe("cInit()", function () {
     it("Should initialize the user account", async function () {
-      const { token, userUninitialized, sdk, cInit, ConfidentialTransfersSDK } =
+      const { token, userUninitialized, sdk, cInit, SDK } =
         await conn.networkHelpers.loadFixture(baseSetup)
 
       const { cPrivateKey, cPublicKey_X, cPublicKey_Y } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(userUninitialized.privateKey)
-        )
+        await SDK.deriveConfidentialKeys(BigInt(userUninitialized.privateKey))
 
       const accountBefore = await token.getAccount(userUninitialized.address)
 

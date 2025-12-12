@@ -37,7 +37,7 @@ describe("ConfidentialTransfers:cold", function () {
         f.user1.address,
         accountAfter.state.nonce,
         accountAfter.auditReports[0],
-        accountAfter.state.eAmount
+        accountAfter.state
       )
       expect(amount).to.equal(0n)
     })

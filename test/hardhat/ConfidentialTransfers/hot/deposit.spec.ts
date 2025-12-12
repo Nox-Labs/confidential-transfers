@@ -5,17 +5,16 @@ import { baseSetup } from "../../BaseSetup.js"
 describe("ConfidentialTransfers/hot", function () {
   describe("cDeposit()", function () {
     it("Should deposit the funds to the zk layer", async function () {
-      const { token, user1, INITIAL_BALANCE, sdk, ConfidentialTransfersSDK } =
+      const { token, user1, INITIAL_BALANCE, sdk, SDK } =
         await conn.networkHelpers.loadFixture(baseSetup)
 
       expect(await token.balanceOf(user1.address)).to.equal(INITIAL_BALANCE)
 
       const depositAmount = conn.ethers.parseEther("1")
 
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user1.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user1.privateKey)
+      )
       const proofOutput = await sdk.generateUpdateProof(
         await sdk.getCircuitInputsForDeposit(
           user1.address,

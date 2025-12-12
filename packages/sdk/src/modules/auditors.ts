@@ -1,4 +1,5 @@
 import { AuditReportStruct } from "../../artifacts/typechain/src/ConfidentialTransfers.js"
+import { Payload } from "../index.js"
 import { Inputs } from "./inputs.js"
 
 export class Auditors extends Inputs {
@@ -33,7 +34,7 @@ export class Auditors extends Inputs {
     reportCreatorAddress: string,
     nonce: bigint,
     auditReport: AuditReportStruct,
-    eAmount: bigint
+    payload: Payload
   ): Promise<bigint> {
     const { pubKey_X, pubKey_Y } = await this.token.getAccount(
       reportCreatorAddress
@@ -48,6 +49,14 @@ export class Auditors extends Inputs {
       nonce,
       BigInt(auditReport.encryptedOTK)
     )
-    return Inputs.decipher(otk, nonce, eAmount)
+
+    const amount = await Inputs.decipher(otk, nonce, BigInt(payload.eAmount))
+
+    const commitment = await Inputs.generateCommitment(amount, otk)
+
+    if (commitment !== BigInt(payload.commitment))
+      throw new Error("Commitment payload does not match")
+
+    return amount
   }
 }

@@ -29,7 +29,7 @@ export {
   Utils,
 }
 
-export class ConfidentialTransfersSDK extends Params {
+export class SDK extends Params {
   constructor(
     tokenAddress: string,
     rpcUrl: string | ethers.ContractRunner,
@@ -38,10 +38,7 @@ export class ConfidentialTransfersSDK extends Params {
     const runner =
       typeof rpcUrl === "string" ? new ethers.JsonRpcProvider(rpcUrl) : rpcUrl
 
-    super(
-      ConfidentialTransfersSDK.getContractInstance(tokenAddress, runner),
-      options
-    )
+    super(SDK.getContractInstance(tokenAddress, runner), options)
   }
 
   static getContractInstance(
