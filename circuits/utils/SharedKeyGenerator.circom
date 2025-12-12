@@ -1,6 +1,5 @@
 pragma circom 2.1.5;
 
-// circomlib imports
 include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/escalarmulany.circom";
 

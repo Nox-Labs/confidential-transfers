@@ -3,7 +3,7 @@ pragma circom 2.0.0;
 include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/comparators.circom";
 
-include "./modules/utils/CommitmentGenerator.circom";
+include "./utils/CommitmentGenerator.circom";
 
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";

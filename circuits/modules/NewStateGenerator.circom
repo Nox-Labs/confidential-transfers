@@ -4,10 +4,10 @@ include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/mux1.circom";
 include "circomlib/circuits/comparators.circom";
 
-include "./utils/OTKGenerator.circom";
-include "./utils/CommitmentGenerator.circom";
-include "./utils/SharedKeyGenerator.circom";
-include "./utils/Cipherer.circom";
+include "../utils/OTKGenerator.circom";
+include "../utils/CommitmentGenerator.circom";
+include "../utils/SharedKeyGenerator.circom";
+include "../utils/Cipherer.circom";
 
 template NewStateGenerator() {
     signal input key;

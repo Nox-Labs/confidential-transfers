@@ -3,7 +3,7 @@ pragma circom 2.0.0;
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/babyjub.circom";
 
-include "./modules/utils/SharedKeyGenerator.circom";
+include "./utils/SharedKeyGenerator.circom";
 
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";

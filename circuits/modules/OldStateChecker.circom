@@ -2,8 +2,8 @@ pragma circom 2.0.0;
 
 include "circomlib/circuits/poseidon.circom";
 
-include "./utils/OTKGenerator.circom";
-include "./utils/CommitmentGenerator.circom";
+include "../utils/OTKGenerator.circom";
+include "../utils/CommitmentGenerator.circom";
 
 template OldStateChecker() {
     signal input key;
