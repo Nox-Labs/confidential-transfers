@@ -5,10 +5,10 @@ import { Inputs } from "./inputs.js"
 export class Auditors extends Inputs {
   async createAuditReport(
     cPrivateKey: bigint,
-    otk: bigint,
     nonce: bigint,
     auditorAddresses: string[]
   ): Promise<AuditReportStruct[]> {
+    const otk = await Inputs.generateOTK(cPrivateKey, nonce)
     const { pubKey_Xs, pubKey_Ys } = await this.token.getCPublicKeys(
       auditorAddresses
     )
@@ -20,10 +20,10 @@ export class Auditors extends Inputs {
         pubKey_Xs[i],
         pubKey_Ys[i]
       )
-      const encryptedOTK = await Inputs.cipher(sharedKey, nonce, otk)
+      const eOTK = await Inputs.cipher(sharedKey, nonce, otk)
       stateAuditReports.push({
         auditor: auditorAddress,
-        encryptedOTK: encryptedOTK,
+        eOTK: eOTK,
       })
     }
     return stateAuditReports
@@ -32,7 +32,6 @@ export class Auditors extends Inputs {
   async decryptAuditReport(
     cPrivateKey: bigint,
     reportCreatorAddress: string,
-    nonce: bigint,
     auditReport: AuditReportStruct,
     payload: Payload
   ): Promise<bigint> {
@@ -46,11 +45,15 @@ export class Auditors extends Inputs {
     )
     const otk = await Inputs.decipher(
       sharedKey,
-      nonce,
-      BigInt(auditReport.encryptedOTK)
+      BigInt(payload.nonce),
+      BigInt(auditReport.eOTK)
     )
 
-    const amount = await Inputs.decipher(otk, nonce, BigInt(payload.eAmount))
+    const amount = await Inputs.decipher(
+      otk,
+      BigInt(payload.nonce),
+      BigInt(payload.eAmount)
+    )
 
     const commitment = await Inputs.generateCommitment(amount, otk)
 

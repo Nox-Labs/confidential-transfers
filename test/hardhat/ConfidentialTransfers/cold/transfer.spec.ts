@@ -59,17 +59,13 @@ describe("ConfidentialTransfers/cold", function () {
         )
         const proof = f.getProofOutput(proofFilename)
 
-        const stateOtk = await f.SDK.generateOTK(f.user1CPrivateKey, nonce)
         const stateAuditorReports = await f.sdk.createAuditReport(
           f.user1CPrivateKey,
-          stateOtk,
           nonce,
           [f.user2.address]
         )
-        const transferOtk = await f.SDK.generateOTK(f.user2CPrivateKey, nonce)
         const transferAuditorReports = await f.sdk.createAuditReport(
           f.user1CPrivateKey,
-          transferOtk,
           nonce,
           [f.user2.address]
         )
@@ -83,8 +79,8 @@ describe("ConfidentialTransfers/cold", function () {
         const accountAfter = await f.token.getAccount(f.user1.address)
         expect(accountAfter.auditReports.length).to.equal(1)
         expect(accountAfter.auditReports[0].auditor).to.equal(f.user2.address)
-        expect(accountAfter.auditReports[0].encryptedOTK).to.equal(
-          stateAuditorReports[0].encryptedOTK
+        expect(accountAfter.auditReports[0].eOTK).to.equal(
+          stateAuditorReports[0].eOTK
         )
         const recipientAccountPendingTransfers = (
           await f.token.getAccount(f.user2.address)
@@ -96,8 +92,8 @@ describe("ConfidentialTransfers/cold", function () {
           recipientAccountPendingTransfers[1].auditReports[0].auditor
         ).to.equal(f.user2.address)
         expect(
-          recipientAccountPendingTransfers[1].auditReports[0].encryptedOTK
-        ).to.equal(transferAuditorReports[0].encryptedOTK)
+          recipientAccountPendingTransfers[1].auditReports[0].eOTK
+        ).to.equal(transferAuditorReports[0].eOTK)
       })
 
       it("Should emit event", async function () {

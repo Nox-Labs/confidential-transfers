@@ -28,59 +28,59 @@ struct ZKArtifacts {
 
 struct AuditReport {
     address auditor;
-    uint256 encryptedOTK;
+    uint256 eOTK;
 }
 
 struct InitParams {
-    AuditReport[] stateAuditReports;
     /**
      * @dev artifacts.output should be = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
      * @dev verifier.pubSignals waiting for = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
      */
     ZKArtifacts artifacts;
+    AuditReport[] stateAuditReports;
 }
 
 struct UpdateParams {
-    uint256 amount;
-    AuditReport[] stateAuditReports;
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount]
      * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, operation, amount, oldNonce, oldCommitment]
      */
     ZKArtifacts artifacts;
+    uint256 amount;
+    AuditReport[] stateAuditReports;
 }
 
 struct TransferParams {
-    address recipient;
-    AuditReport[] stateAuditReports;
-    AuditReport[] transferAuditReports;
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
      * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y]
      */
     ZKArtifacts artifacts;
+    address recipient;
+    AuditReport[] stateAuditReports;
+    AuditReport[] transferAuditReports;
 }
 
 struct ApplyParams {
-    uint256[] pendingTransfersIndexes;
-    AuditReport[] stateAuditReports;
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount]
      * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, n, oldNonce, oldCommitment, ...pendingTransfersCommitments[max]]
      */
     ZKArtifacts artifacts;
+    uint256[] pendingTransfersIndexes;
+    AuditReport[] stateAuditReports;
 }
 
 struct ApplyAndTransferParams {
-    address recipient;
-    uint256[] pendingTransfersIndexes;
-    AuditReport[] stateAuditReports;
-    AuditReport[] transferAuditReports;
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
      * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y, n, ...pendingTransfersCommitments[max]]
      */
     ZKArtifacts artifacts;
+    address recipient;
+    uint256[] pendingTransfersIndexes;
+    AuditReport[] stateAuditReports;
+    AuditReport[] transferAuditReports;
 }
 
 interface IConfidentialTransfers {

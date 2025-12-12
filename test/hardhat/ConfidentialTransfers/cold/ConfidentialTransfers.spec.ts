@@ -16,10 +16,8 @@ describe("ConfidentialTransfers:cold", function () {
       await f.cInit("cold", f.user2)
 
       // user activity
-      const otk = await f.SDK.generateOTK(f.user1CPrivateKey, 0n)
       const auditorReports = await f.sdk.createAuditReport(
         f.user1CPrivateKey,
-        otk,
         0n,
         [f.user2.address]
       )
@@ -35,7 +33,6 @@ describe("ConfidentialTransfers:cold", function () {
       const amount = await f.sdk.decryptAuditReport(
         f.user2CPrivateKey,
         f.user1.address,
-        accountAfter.state.nonce,
         accountAfter.auditReports[0],
         accountAfter.state
       )
