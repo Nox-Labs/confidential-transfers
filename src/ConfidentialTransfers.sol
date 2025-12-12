@@ -79,6 +79,8 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         account.pubKey_X = initParams.artifacts.outputs[0];
         account.pubKey_Y = initParams.artifacts.outputs[1];
         account.auditReports = initParams.stateAuditReports;
+
+        emit CInitialized(msg.sender, account.pubKey_X, account.pubKey_Y, account.state, account.auditReports);
     }
 
     function cTransfer(TransferParams calldata transferParams) public virtual {
@@ -92,6 +94,15 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         Account storage recipientAccount = $.accounts[transferParams.recipient];
         recipientAccount.pendingTransfers
             .push(PendingTransfer(msg.sender, transferPackage, transferParams.transferAuditReports));
+
+        emit CTransferred(
+            msg.sender,
+            transferParams.recipient,
+            newState,
+            transferPackage,
+            account.auditReports,
+            transferParams.transferAuditReports
+        );
     }
 
     function cApply(ApplyParams calldata applyParams) public virtual {
@@ -102,6 +113,8 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         account.state = newState;
         account.auditReports = applyParams.stateAuditReports;
         account.pendingTransfers.removeByIndices(applyParams.pendingTransfersIndexes);
+
+        emit CApplied(msg.sender, newState, account.auditReports);
     }
 
     function cDeposit(UpdateParams calldata updateParams) public virtual {
@@ -110,6 +123,8 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
         account.state = newState;
         account.auditReports = updateParams.stateAuditReports;
+
+        emit CDeposited(msg.sender, updateParams.amount, newState, account.auditReports);
     }
 
     function cWithdraw(UpdateParams calldata updateParams) public virtual {
@@ -118,11 +133,13 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         account.state = newState;
         account.auditReports = updateParams.stateAuditReports;
         _cTransfer(address(this), msg.sender, updateParams.amount);
+
+        emit CWithdrawn(msg.sender, updateParams.amount, newState, account.auditReports);
     }
 
     function cApplyAndTransfer(ApplyAndTransferParams calldata applyAndTransferParams) public virtual {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        (Payload memory newState, Payload memory pendingTransfer) = _applyAndTransfer(applyAndTransferParams);
+        (Payload memory newState, Payload memory pendingTransferPayload) = _applyAndTransfer(applyAndTransferParams);
         Account storage account = $.accounts[msg.sender];
         account.state = newState;
         account.auditReports = applyAndTransferParams.stateAuditReports;
@@ -130,7 +147,16 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
         Account storage recipientAccount = $.accounts[applyAndTransferParams.recipient];
         recipientAccount.pendingTransfers
-            .push(PendingTransfer(msg.sender, pendingTransfer, applyAndTransferParams.transferAuditReports));
+            .push(PendingTransfer(msg.sender, pendingTransferPayload, applyAndTransferParams.transferAuditReports));
+        emit CApplied(msg.sender, newState, account.auditReports);
+        emit CTransferred(
+            msg.sender,
+            applyAndTransferParams.recipient,
+            newState,
+            pendingTransferPayload,
+            applyAndTransferParams.stateAuditReports,
+            applyAndTransferParams.transferAuditReports
+        );
     }
 
     /* INTERNAL */

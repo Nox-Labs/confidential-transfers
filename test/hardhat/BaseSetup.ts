@@ -27,7 +27,7 @@ export async function baseSetupUninitializedUsers() {
 
   const MOCK_PROOF_OUTPUT: ProofOutput = {
     proof: Array(24).fill(BigInt(0)),
-    pubSignals: Array(10).fill(BigInt(0)),
+    pubSignals: Array(8).fill(BigInt(0)),
   }
 
   const getVerifierPath = (name: string) =>
@@ -327,13 +327,13 @@ export async function baseSetupUninitializedUsers() {
     initVerifier: iv,
     applyVerifier: av,
     sdk,
-    ConfidentialTransfersSDK,
     INITIAL_BALANCE,
     PROOFS_DIR,
     DEPOSIT_AMOUNT,
     WITHDRAW_AMOUNT,
     TRANSFER_AMOUNT,
     MOCK_PROOF_OUTPUT,
+    SDK: ConfidentialTransfersSDK,
     cInit,
     cDeposit,
     cWithdraw,

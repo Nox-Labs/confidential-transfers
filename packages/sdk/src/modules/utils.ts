@@ -18,17 +18,17 @@ export class Utils {
   }
 
   static async generateTransferOTK(
-    senderCPrivateKey: bigint,
-    senderNonce: bigint,
-    recipientCPublicKey_X: bigint,
-    recipientCPublicKey_Y: bigint
+    cPrivateKey: bigint,
+    nonce: bigint,
+    cPublicKey_X: bigint,
+    cPublicKey_Y: bigint
   ): Promise<bigint> {
     const sharedKey = await this.deriveSharedKey(
-      senderCPrivateKey,
-      recipientCPublicKey_X,
-      recipientCPublicKey_Y
+      cPrivateKey,
+      cPublicKey_X,
+      cPublicKey_Y
     )
-    return this.generateOTK(sharedKey, senderNonce)
+    return this.generateOTK(sharedKey, nonce)
   }
 
   static async decryptAmount(
@@ -66,24 +66,24 @@ export class Utils {
   }
 
   static async cipher(
-    otk: bigint,
+    key: bigint,
     nonce: bigint,
     plaintext: bigint
   ): Promise<bigint> {
     const poseidon = await buildPoseidon()
-    const keystream = poseidon([otk, nonce])
+    const keystream = poseidon([key, nonce])
     return poseidon.F.toObject(
       poseidon.F.add(poseidon.F.e(plaintext), keystream)
     )
   }
 
   static async decipher(
-    otk: bigint,
+    key: bigint,
     nonce: bigint,
     ciphertext: bigint
   ): Promise<bigint> {
     const poseidon = await buildPoseidon()
-    const keystream = poseidon([otk, nonce])
+    const keystream = poseidon([key, nonce])
     return poseidon.F.toObject(
       poseidon.F.sub(poseidon.F.e(ciphertext), keystream)
     )

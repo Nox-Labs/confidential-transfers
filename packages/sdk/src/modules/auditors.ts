@@ -3,8 +3,8 @@ import { Inputs } from "./inputs.js"
 
 export class Auditors extends Inputs {
   async createAuditReport(
-    otk: bigint,
     cPrivateKey: bigint,
+    otk: bigint,
     nonce: bigint,
     auditorAddresses: string[]
   ): Promise<AuditReportStruct[]> {
@@ -19,7 +19,7 @@ export class Auditors extends Inputs {
         pubKey_Xs[i],
         pubKey_Ys[i]
       )
-      const encryptedOTK = await Inputs.cipher(otk, nonce, sharedKey)
+      const encryptedOTK = await Inputs.cipher(sharedKey, nonce, otk)
       stateAuditReports.push({
         auditor: auditorAddress,
         encryptedOTK: encryptedOTK,
@@ -30,9 +30,10 @@ export class Auditors extends Inputs {
 
   async decryptAuditReport(
     cPrivateKey: bigint,
+    reportCreatorAddress: string,
     nonce: bigint,
     auditReport: AuditReportStruct,
-    reportCreatorAddress: string
+    eAmount: bigint
   ): Promise<bigint> {
     const { pubKey_X, pubKey_Y } = await this.token.getAccount(
       reportCreatorAddress
@@ -42,7 +43,11 @@ export class Auditors extends Inputs {
       pubKey_X,
       pubKey_Y
     )
-    const otk = await Inputs.generateOTK(sharedKey, nonce)
-    return Inputs.decipher(otk, nonce, BigInt(auditReport.encryptedOTK))
+    const otk = await Inputs.decipher(
+      sharedKey,
+      nonce,
+      BigInt(auditReport.encryptedOTK)
+    )
+    return Inputs.decipher(otk, nonce, eAmount)
   }
 }

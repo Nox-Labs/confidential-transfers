@@ -91,6 +91,21 @@ interface IConfidentialTransfers {
     function cTransfer(TransferParams calldata transferParams) external;
     function cApplyAndTransfer(ApplyAndTransferParams calldata applyAndTransferParams) external;
 
+    event CInitialized(
+        address indexed account, uint256 pubKey_X, uint256 pubKey_Y, Payload newState, AuditReport[] auditReports
+    );
+    event CDeposited(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
+    event CWithdrawn(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
+    event CApplied(address indexed account, Payload newState, AuditReport[] auditReports);
+    event CTransferred(
+        address indexed sender,
+        address indexed recipient,
+        Payload newState,
+        Payload transferPayload,
+        AuditReport[] auditReports,
+        AuditReport[] transferAuditReports
+    );
+
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);
     error VerifierCallFailed();
