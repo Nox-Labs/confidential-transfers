@@ -13,8 +13,13 @@ npm install
 ## Usage
 
 0. Download the zk keys as mentioned in [sdk](../sdk/README.md)
+
+```bash
+npm run download:keys
+```
+
 1. Start the backend service:
 
 ```bash
-npm run start:dev
+npm run start
 ```

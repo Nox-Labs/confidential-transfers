@@ -24,5 +24,6 @@ contract DeployMock is Script {
             new MockERC20(20, initVerifier, applyVerifier, updateVerifier, transferVerifier, applyAndTransferVerifier);
         mockERC20.mint(msg.sender, 1e22);
         console.log("MockERC20 deployed to:", address(mockERC20));
+        console.log("Anvil 0 address:", msg.sender, "with balance:", mockERC20.balanceOf(msg.sender));
     }
 }

@@ -10,7 +10,7 @@ The Confidential Transfers SDK is a TypeScript library that provides a set of fu
 npm install @nox-labs/confidential-transfers-sdk
 ```
 
-2. Install the [zk keys](./keys/) from this repository.
+2. Install the zk keys or generate them
 
 ## How to use
 

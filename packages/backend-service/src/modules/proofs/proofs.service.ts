@@ -40,7 +40,7 @@ export class ProofsService implements OnModuleInit {
     let reports
     if (auditors && auditors.length > 0) {
       const nonce = (await this.sdk.token.getAccount(account)).state.nonce
-      reports = await this.sdk.createAuditReport(
+      reports = await this.sdk.createStateAuditReport(
         cPrivateKey,
         nonce + 1n,
         auditors
@@ -69,14 +69,15 @@ export class ProofsService implements OnModuleInit {
     let transferAuditReports
     if (auditors && auditors.length > 0) {
       const nonce = (await this.sdk.token.getAccount(account)).state.nonce
-      stateAuditReports = await this.sdk.createAuditReport(
+      stateAuditReports = await this.sdk.createStateAuditReport(
         cPrivateKey,
         nonce + 1n,
         auditors
       )
-      transferAuditReports = await this.sdk.createAuditReport(
+      transferAuditReports = await this.sdk.createTransferAuditReport(
         cPrivateKey,
         nonce + 1n,
+        to,
         auditors
       )
     }
@@ -100,7 +101,7 @@ export class ProofsService implements OnModuleInit {
     let reports
     if (auditors && auditors.length > 0) {
       const nonce = (await this.sdk.token.getAccount(account)).state.nonce
-      reports = await this.sdk.createAuditReport(
+      reports = await this.sdk.createStateAuditReport(
         cPrivateKey,
         nonce + 1n,
         auditors
@@ -117,7 +118,7 @@ export class ProofsService implements OnModuleInit {
     let reports
     if (auditors && auditors.length > 0) {
       // Nonce is 0 for Init
-      reports = await this.sdk.createAuditReport(cPrivateKey, 0n, auditors)
+      reports = await this.sdk.createStateAuditReport(cPrivateKey, 0n, auditors)
     }
 
     return this.sdk.getInitParams(proof, reports)
@@ -139,7 +140,7 @@ export class ProofsService implements OnModuleInit {
     let reports
     if (auditors && auditors.length > 0) {
       const nonce = (await this.sdk.token.getAccount(account)).state.nonce
-      reports = await this.sdk.createAuditReport(
+      reports = await this.sdk.createStateAuditReport(
         cPrivateKey,
         nonce + 1n,
         auditors
@@ -169,7 +170,7 @@ export class ProofsService implements OnModuleInit {
     let stateAuditReports
     if (auditors && auditors.length > 0) {
       const nonce = (await this.sdk.token.getAccount(account)).state.nonce
-      stateAuditReports = await this.sdk.createAuditReport(
+      stateAuditReports = await this.sdk.createStateAuditReport(
         cPrivateKey,
         nonce + 1n,
         auditors

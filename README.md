@@ -74,6 +74,7 @@ The implementation supports the full lifecycle of a confidential token:
 
    ```bash
    npm install
+   npm run download:powersOfTau
    ```
 
 ## Usage
@@ -91,6 +92,12 @@ npm run build:contracts
 ```
 
 ### Testing
+
+Test build on top of [SDK](./packages/sdk/) so first build the SDK and then run the tests.
+
+```bash
+npm run build:sdk
+```
 
 The project includes three tiers of tests:
 
@@ -115,10 +122,14 @@ The project includes three tiers of tests:
    npm run test:hh:hot
    ```
 
+### Demo Application
+
+The project includes a demo application that allows you to interact with the confidential transfers contract. See [frontend-demo](./packages/frontend-demo/README.md) for more details.
+
 ## Documentation
 
 For more detailed information, check the `docs/` directory:
 
 - [Technical Specification](docs/TechnicalSpecification.md)
 - [Integration Guidelines](docs/GUIDELINE.md)
-- [CustodyGuidelines](docs/Custody Integration.md)
+- [Custody Guidelines](docs/CustodyIntegration.md)
