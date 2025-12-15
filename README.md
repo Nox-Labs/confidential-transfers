@@ -4,41 +4,53 @@
 [![Hardhat](https://img.shields.io/badge/Hardhat-^3.0-blue.svg)](https://hardhat.org/)
 [![Foundry](https://img.shields.io/badge/Foundry-blue.svg)](https://getfoundry.sh/)
 
-This project is a proof-of-concept implementation of confidential transfers for ERC20-like tokens on Ethereum Virtual Machine (EVM) compatible blockchains. It leverages zk-SNARKs (PLONK) to enable privacy-preserving transactions, allowing users to transfer tokens without revealing the amounts on-chain while keeping link between sender and receiver private.
+This project is a proof-of-concept implementation of confidential transfers for ERC20-like tokens on Ethereum Virtual Machine (EVM) compatible blockchains. It leverages zk-SNARKs (PLONK) to enable privacy-preserving transactions, allowing users to transfer tokens without revealing the amounts on-chain while keeping the link between sender and receiver private.
 
 ## How It Works
 
-The system uses an account-based model where a user's private balance is represented by a cryptographic commitment. All state transitions (like depositing, transferring, or withdrawing) are validated by zero-knowledge proofs, ensuring that all operations are valid without revealing the underlying private data (like transaction amounts or private keys).
+The system uses an **Account-Based Model** where a user's private balance is represented by a cryptographic commitment. All state transitions (deposits, transfers, withdrawals) are validated by zero-knowledge proofs, ensuring correctness without revealing underlying private data.
 
-- **ZKP Circuits**: The core logic is defined in `circom` circuits, which generate proofs for each confidential operation.
-- **Smart Contracts**: The on-chain component is written in Solidity and uses both Hardhat and Foundry for development and testing. It stores user commitments and verifies the proofs submitted with each transaction.
-- **Client-Side SDK**: A TypeScript-based SDK is used in the tests to derive ZK keys, generate proofs, and interact with the smart contracts.
+- **Confidentiality**: Balances and transfer amounts are hidden using Pedersen commitments.
+- **Compliance**: The protocol supports a flexible **Auditor** role. Transactions include encrypted **Audit Reports** (using One-Time Audit Keys), enabling designated auditors to decrypt transaction details for regulatory compliance without exposing data to the public.
+- **Recoverability**: Users can recover their confidential state and funds using only their Ethereum private key (via deterministic entropy derivation).
+
+### Technology Stack
+
+- **ZKP Circuits**: Written in `circom`, implementing the core logic for state transitions.
+- **Proving System**: PLONK (Universal Trusted Setup).
+- **Smart Contracts**: Solidity contracts for verification and state management.
+- **Cryptography**: Poseidon Hash, Baby Jubjub Curve (ECDH), Pedersen Commitments.
 
 ## Features
 
 The implementation supports the full lifecycle of a confidential token:
 
-> Note: when word starts with `c` it stands for "confidential".
+> Note: The prefix `c` stands for "confidential".
 
-- **`cInit`**: Initializes a new confidential account for a user, creating their first zero-balance commitment on-chain and publish public key.
-- **`cDeposit`**: Converts public ERC20 tokens into confidential tokens by depositing them into the contract and updating the user's private commitment.
-- **`cTransfer`**: Send a confidential transfer to another user. This operation updates the sender's commitment and creates a new "pending transfer" for the recipient, which will be applied by the recipient using `cApply`.
-- **`cApply`**: Allows a user to claim one or more incoming pending transfers, rolling them into their main confidential balance. The system supports applying a variable number of transfers in a single transaction.
-- **`cWithdraw`**: Converts confidential tokens back into public ERC20 tokens, withdrawing them from the contract to the user's public address.
+- **`cInit`**: Initializes a new confidential account for a user, creating their first zero-balance commitment and publishing their public key.
+- **`cDeposit`**: Converts public ERC20 tokens into confidential tokens by depositing them into the contract.
+- **`cTransfer`**: Sends a confidential transfer to another user. This creates a "pending transfer" for the recipient.
+- **`cApply`**: Allows a recipient to claim incoming pending transfers, rolling them into their main confidential balance. Supports batching multiple transfers.
+- **`cApplyAndTransfer`**: **Gas Optimization**. Combines `cApply` and `cTransfer` in a single transaction, allowing users to receive funds and immediately send them out efficiently.
+- **`cWithdraw`**: Converts confidential tokens back into public ERC20 tokens, withdrawing them to the user's public address.
 
 ## Project Structure
 
 ```
 .
-├── circuits/         # Circom source code for ZKP circuits (init, transfer, etc.)
+├── circuits/         # Circom source code for ZKP circuits
+│   ├── modules/      # Reusable circuit components (State generation, Checks)
+│   ├── utils/        # Cryptographic primitives (Poseidon, ECDH, OTK)
+│   └── *.circom      # Main entry point circuits
 ├── src/              # Solidity smart contracts
-│   ├── interface/
-│   ├── lib/
-│   ├── verifiers/    # ZKP verifier contracts generated from circuits
-│   └── ConfidentialTransfers.sol # Main abstract contract with core logic
-├── test/
-│   ├── hardhat/      # "Hot" and "Cold" tests written in TypeScript using Hardhat
-│   └── foundry/      # Solidity-based tests using Foundry
+│   ├── interface/    # Interfaces and Struct definitions
+│   ├── verifiers/    # Auto-generated ZKP verifier contracts
+│   └── ConfidentialTransfers.sol # Core abstract contract
+├── packages/         # Monorepo packages
+│   ├── sdk/          # TypeScript SDK for key derivation and proof generation
+│   ├── frontend-demo/# Next.js Demo Application
+│   └── backend-service/ # NestJS Service example
+└── test/             # Comprehensive test suite (Foundry & Hardhat)
 ```
 
 ## Getting Started
@@ -46,7 +58,8 @@ The implementation supports the full lifecycle of a confidential token:
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/en/) (v18 or higher)
-- [Foundry](https://getfoundry.sh/)
+- [Foundry](https://getfoundry.sh/) (for Solidity tests)
+- [Circom](https://github.com/iden3/circom) (for ZK circuits)
 
 ### Installation
 
@@ -56,7 +69,8 @@ The implementation supports the full lifecycle of a confidential token:
    git clone <repository-url>
    cd <repository-name>
    ```
-2. Install the Node.js dependencies:
+
+2. Install dependencies:
 
    ```bash
    npm install
@@ -64,54 +78,47 @@ The implementation supports the full lifecycle of a confidential token:
 
 ## Usage
 
-### Build the Circuits
+### Build
+
+Compile circuits and smart contracts:
 
 ```bash
-# Run the build script
+# Build all ZK circuits (requires circom installed)
 npm run build:circuits:all
-```
 
-### Compile Smart Contracts
-
-```bash
+# Compile contracts
 npm run build:contracts
 ```
 
-### Run Tests
+### Testing
 
-The project includes three types of tests:
+The project includes three tiers of tests:
 
-- **Foundry Tests**: Unit tests for specific contract logic written in Solidity.
+1. **Foundry Tests** (Unit Logic):
 
-  ```bash
-  npm run test:foundry
-  ```
-- **Hardhat "Hot" Tests**: Integration tests that generate ZKP proofs on-the-fly for each test case. They are thorough but slow.
+   ```bash
+   npm run test:foundry
+   ```
 
-  ```bash
-  npm run test:hh:hot
-  ```
-- **Hardhat "Cold" Tests**: Integration tests that use pre-generated proofs. They are much faster and ideal for quick checks and CI.
+2. **Hardhat "Cold" Tests** (Fast Integration):
+   Use pre-generated proofs for quick iteration.
 
-  ```bash
-  # First, generate the required proofs:
-  npm run test:hh:cold:prepare
-  ```
+   ```bash
+   npm run test:hh:cold:prepare # Generate proofs once
+   npm run test:hh:cold         # Run tests
+   ```
 
-  ```bash
-  # Then, run the cold tests:
-  npm run test:hh:cold
-  ```
+3. **Hardhat "Hot" Tests** (Full Integration):
+   Generate real ZK proofs on-the-fly. Slower but comprehensive.
 
-### Open question
+   ```bash
+   npm run test:hh:hot
+   ```
 
-1. Do we need to add constraints for cPrivateKey generation in Init circuit to verify that its was correctly derived from ethPrivateKey? Or allow any private key?
-2. After auditor rotation, should new auditor be able to decrypt past events?
-3. Is it okay if `ConfidentialTransfersBridgeable.sol` would burn token in deposit, effecting totalSupply?
-4. Is it okay for bridge in `ConfidentialTransfersBridgeable.sol` to not provide destination finality(it difficult to validate all data on src chain about dst state)? And it it okay if dst chain will send back package to src chain?
-5. Maybe viewing key is better for KYT providers that single auditor.
+## Documentation
 
-### TODO
+For more detailed information, check the `docs/` directory:
 
-1. Multicall cTransfer + cApply
-2. reCInit
+- [Technical Specification](docs/TechnicalSpecification.md)
+- [Integration Guidelines](docs/GUIDELINE.md)
+- [CustodyGuidelines](docs/Custody Integration.md)

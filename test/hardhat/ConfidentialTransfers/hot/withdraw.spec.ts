@@ -2,8 +2,8 @@ import { expect } from "chai"
 
 import { baseSetup, conn } from "../../BaseSetup.js"
 
-describe("ConfidentialTransfers/hot", function () {
-  describe("cWithdraw()", function () {
+describe("ConfidentialTransfers:hot", function () {
+  describe("cWithdraw():hot", function () {
     it("Should withdraw the funds from the zk layer", async function () {
       const { token, user1, INITIAL_BALANCE, sdk, cDeposit, SDK } =
         await conn.networkHelpers.loadFixture(baseSetup)
