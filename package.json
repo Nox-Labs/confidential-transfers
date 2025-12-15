@@ -1,8 +1,13 @@
 {
-  "name": "@noxlabs/confidential-transfers-contracts",
-  "version": "1.0.0",
+  "name": "@noxlabs/confidential-transfers",
+  "version": "0.0.1",
   "type": "module",
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
+    "prepublishOnly": "npm run build:contracts",
     "build:contracts": "forge b && hardhat compile",
     "build:circuits": "bash ./circuits-build.sh",
     "build:circuits:all": "npm run build:circuits -- init && npm run build:circuits -- apply && npm run build:circuits -- update && npm run build:circuits -- transfer && npm run build:circuits -- applyAndTransfer && forge fmt",
