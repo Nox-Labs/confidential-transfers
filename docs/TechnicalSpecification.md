@@ -72,9 +72,10 @@ The Confidential Transfers protocol is a Layer 1 smart contract extension for ER
 
 Each user has:
 
-- **One on-chain account state** (`Package` struct)
-- **A queue of pending transfers** (`Package[]` array)
+- **One on-chain account state** (`Payload` struct)
+- **A queue of pending transfers** (`PendingTransfer` struct)
 - **Confidential keys** derived from entropy
+- **Audit Reports** for compliance
 
 ## Cryptographic Primitives
 
@@ -111,12 +112,12 @@ Each user has:
 
 ### 3. Pedersen Commitment
 
-**Purpose**: Hiding commitment to amount and blinding factor
+**Purpose**: Hiding commitment to amount and OTK (acting as blinding factor)
 
 **Formula**:
 
 ```
-Commitment = Poseidon([amount, blindingFactor])
+Commitment = Poseidon([amount, OTK])
 ```
 
 **Properties**:
@@ -164,28 +165,46 @@ sharedKey = ECDH(senderCPrivateKey, recipientCPublicKey)
 
 ### On-Chain Structures
 
-#### `Package`
+#### `Payload`
 
-Represents a confidential account state or pending transfer.
+Represents a confidential account state or pending transfer payload.
 
 ```solidity
-struct Package {
+struct Payload {
     uint256 nonce;              // State version counter
-    uint256 pubKey_X;           // Baby Jubjub public key X coordinate
-    uint256 pubKey_Y;           // Baby Jubjub public key Y coordinate
-    uint256 commitment;         // Pedersen commitment to (amount, blindingFactor)
+    uint256 commitment;         // Pedersen commitment to (amount, OTK)
     uint256 eAmount;            // Encrypted amount (for recovery)
-    uint256 eAmountForAuditor;  // Encrypted amount for auditor
 }
 ```
 
 **Fields**:
 
 - `nonce`: Increments with each state update, prevents replay attacks
-- `pubKey_X/Y`: Confidential public key on Baby Jubjub curve
 - `commitment`: Public commitment to balance
 - `eAmount`: Amount encrypted with user's key (recovery)
-- `eAmountForAuditor`: Amount encrypted with auditor's key (compliance)
+
+#### `AuditReport`
+
+Represents an encrypted One-Time Key (OTK) for an auditor.
+
+```solidity
+struct AuditReport {
+    address auditor;            // Address of the auditor
+    uint256 eOTK;               // Encrypted One-Time Key
+}
+```
+
+#### `PendingTransfer`
+
+Represents an incoming transfer.
+
+```solidity
+struct PendingTransfer {
+    address sender;             // Address of the sender
+    Payload payload;            // The transfer payload
+    AuditReport[] auditReports; // Audit reports for the transfer
+}
+```
 
 #### `Account`
 
@@ -193,8 +212,11 @@ Represents a user's complete confidential account.
 
 ```solidity
 struct Account {
-    Package state;              // Current account state
-    Package[] pendingTransfers; // Queue of incoming transfers
+    uint256 pubKey_X;           // Baby Jubjub public key X coordinate
+    uint256 pubKey_Y;           // Baby Jubjub public key Y coordinate
+    Payload state;              // Current account state
+    AuditReport[] auditReports; // Audit reports for the current state
+    PendingTransfer[] pendingTransfers; // Queue of incoming transfers
 }
 ```
 
@@ -242,9 +264,9 @@ Main Circuit
 ├── OldStateChecker      (validates current state)
 ├── NewStateGenerator    (generates new state)
 ├── CommitmentGenerator  (creates commitments)
-├── BFGenerator          (generates blinding factors)
-├── PoseidonStreamCipher (encryption)
-└── ECDH                 (key exchange)
+├── OTKGenerator         (generates One-Time Keys)
+├── Cipherer             (encryption)
+└── SharedKeyGenerator   (key exchange)
 ```
 
 ### Circuit 1: Init
@@ -255,23 +277,17 @@ Main Circuit
 
 - `cPrivateKey`: User's confidential private key
 
-**Public Inputs**:
-
-- `auditorPublicKey_X/Y`: Auditor's public key
-
 **Public Outputs**:
 
 - `cPublicKey_X/Y`: User's confidential public key
 - `newCommitment`: Initial commitment (amount = 0)
 - `eAmount`: Encrypted amount (0)
-- `eAmountForAuditor`: Encrypted amount for auditor (0)
 
 **Constraints**:
 
 1. Derive public key from private key: `PK = cPrivateKey * G`
 2. Generate initial commitment with amount = 0, nonce = 0
 3. Encrypt amount with user's key
-4. Encrypt amount with auditor's key (if auditor set)
 
 ### Circuit 2: Update (Deposit/Withdraw)
 
@@ -284,7 +300,6 @@ Main Circuit
 
 **Public Inputs**:
 
-- `auditorPublicKey_X/Y`: Auditor's public key
 - `operation`: 0 = deposit, 1 = withdraw
 - `amount`: Deposit/withdraw amount
 - `oldNonce`: Current nonce
@@ -294,11 +309,10 @@ Main Circuit
 
 - `newCommitment`: Updated commitment
 - `eAmount`: Encrypted new amount
-- `eAmountForAuditor`: Encrypted amount for auditor
 
 **Constraints**:
 
-1. Verify old state: `oldCommitment == Poseidon([oldAmount, BF(oldNonce)])`
+1. Verify old state: `oldCommitment == Poseidon([oldAmount, OTK(oldNonce)])`
 2. Validate operation: `operation ∈ {0, 1}`
 3. For withdraw: `amount ≤ oldAmount` (prevent overdraft)
 4. Calculate new amount: `newAmount = oldAmount + (1 - 2*operation) * amount`
@@ -325,7 +339,6 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 **Public Inputs**:
 
-- `auditorPublicKey_X/Y`: Auditor's public key
 - `oldNonce`: Sender's current nonce
 - `oldCommitment`: Sender's current commitment
 - `recipientPublicKey_X/Y`: Recipient's confidential public key
@@ -334,10 +347,8 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 - `newCommitment`: Sender's updated commitment
 - `eAmount`: Sender's encrypted new amount
-- `eAmountForAuditor`: Sender's encrypted amount for auditor
 - `transferCommitment`: Pending transfer commitment
 - `transferEAmount`: Encrypted transfer amount
-- `transferEAmountForAuditor`: Encrypted transfer amount for auditor
 
 **Constraints**:
 
@@ -359,11 +370,10 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 - `cPrivateKey`: Recipient's confidential private key
 - `oldAmount`: Recipient's current balance
 - `pendingTransfersAmounts[max]`: Decrypted amounts of pending transfers
-- `pendingTransfersBF[max]`: Blinding factors of pending transfers
+- `pendingTransfersOTKs[max]`: One-Time Keys (OTKs) of pending transfers
 
 **Public Inputs**:
 
-- `auditorPublicKey_X/Y`: Auditor's public key
 - `n`: Number of pending transfers to apply
 - `oldNonce`: Recipient's current nonce
 - `oldCommitment`: Recipient's current commitment
@@ -373,13 +383,12 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 - `newCommitment`: Updated commitment
 - `eAmount`: Encrypted new amount
-- `eAmountForAuditor`: Encrypted amount for auditor
 
 **Constraints**:
 
 1. Verify recipient's old state
 2. For each pending transfer `i < n`:
-   - Verify commitment: `pendingTransfersCommitments[i] == Poseidon([pendingTransfersAmounts[i], pendingTransfersBF[i]])`
+   - Verify commitment: `pendingTransfersCommitments[i] == Poseidon([pendingTransfersAmounts[i], pendingTransfersOTKs[i]])`
 3. Calculate new amount: `newAmount = oldAmount + Σ(pendingTransfersAmounts[i])` for `i < n`
 4. Increment nonce: `newNonce = oldNonce + 1`
 5. Generate new commitment and encryption
@@ -401,11 +410,10 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 - `oldAmount`: Current balance
 - `transferAmount`: Amount to transfer
 - `pendingTransfersAmounts[max]`: Decrypted amounts of pending transfers
-- `pendingTransfersBF[max]`: Blinding factors of pending transfers
+- `pendingTransfersOTKs[max]`: One-Time Keys (OTKs) of pending transfers
 
 **Public Inputs**:
 
-- `auditorPublicKey_X/Y`: Auditor's public key
 - `oldNonce`: Current nonce
 - `oldCommitment`: Current commitment
 - `recipientPublicKey_X/Y`: Recipient's public key
@@ -416,10 +424,8 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 
 - `newCommitment`: Updated commitment
 - `eAmount`: Encrypted new amount
-- `eAmountForAuditor`: Encrypted amount for auditor
 - `transferCommitment`: Pending transfer commitment
 - `transferEAmount`: Encrypted transfer amount
-- `transferEAmountForAuditor`: Encrypted transfer amount for auditor
 
 **Constraints**:
 
@@ -439,10 +445,9 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 ```solidity
 abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable {
     using ArrayLib for uint256[];
-    using ArrayLib for Package[];
+    using ArrayLib for Payload[];
 
     struct ConfidentialTransfersStorage {
-        address auditor;
         uint256 maxPendingTransfers;
         InitPlonkVerifier initVerifier;
         ApplyPlonkVerifier applyVerifier;
@@ -485,10 +490,7 @@ pubSignals = [
     cPublicKey_X,
     cPublicKey_Y,
     newCommitment,
-    eAmount,
-    eAmountForAuditor,
-    auditorPublicKey_X,
-    auditorPublicKey_Y
+    eAmount
 ]
 ```
 
@@ -513,9 +515,6 @@ Deposits public tokens into confidential balance.
 pubSignals = [
     newCommitment,
     eAmount,
-    eAmountForAuditor,
-    auditorPublicKey_X,
-    auditorPublicKey_Y,
     operation,      // 0 for deposit
     amount,
     oldNonce,
@@ -563,12 +562,8 @@ Sends confidential transfer to recipient.
 pubSignals = [
     newCommitment,              // Sender's new commitment
     eAmount,                    // Sender's encrypted amount
-    eAmountForAuditor,          // Sender's encrypted amount for auditor
     transferCommitment,         // Pending transfer commitment
     transferEAmount,            // Encrypted transfer amount
-    transferEAmountForAuditor,  // Encrypted transfer amount for auditor
-    auditorPublicKey_X,
-    auditorPublicKey_Y,
     oldNonce,
     oldCommitment,
     recipientPublicKey_X,
@@ -598,9 +593,6 @@ Applies pending transfers to main balance.
 pubSignals = [
     newCommitment,
     eAmount,
-    eAmountForAuditor,
-    auditorPublicKey_X,
-    auditorPublicKey_Y,
     n,                          // Number of transfers
     oldNonce,
     oldCommitment,
@@ -631,12 +623,8 @@ Combines apply and transfer operations.
 pubSignals = [
     newCommitment,
     eAmount,
-    eAmountForAuditor,
     transferCommitment,
     transferEAmount,
-    transferEAmountForAuditor,
-    auditorPublicKey_X,
-    auditorPublicKey_Y,
     oldNonce,
     oldCommitment,
     recipientPublicKey_X,
@@ -651,18 +639,14 @@ pubSignals = [
 
 #### Auditor Management
 
-```solidity
-function setAuditor(address auditor) public virtual {
-    _authorizeAuditorChange();  // Must be overridden
-    _getConfidentialTransferStorage().auditor = auditor;
-}
-```
+Auditor management is now flexible. `AuditReport`s are passed with transactions. The protocol assumes an off-chain compliance requirement where transactions without valid audit reports for the designated auditor(s) are considered non-compliant or rejected by a gateway/indexer.
 
 **Auditor Role**:
 
-- Can decrypt all `eAmountForAuditor` fields
-- Used for compliance and regulatory oversight
-- Can be rotated via `setAuditor()`
+- Can decrypt `eOTK` using their private key
+- Recovers `OTK` (One-Time Key)
+- Uses `OTK` to decrypt `eAmount` and verify `commitment`
+- Can audit transaction history and balances
 
 ### Error Handling
 
@@ -737,9 +721,10 @@ error MaxPendingTransfersReached();
 
 ### Auditor Security
 
-- Auditor can decrypt all `eAmountForAuditor` fields
-- Auditor rotation requires secure key handover
-- Historical data access depends on previous auditor cooperation
+- Auditor access is granular via `AuditReport`s.
+- `OTK` (One-Time Key) architecture ensures forward secrecy if the auditor key is compromised (past transactions remain secure if OTKs were encrypted with ephemeral keys, or if only the OTAK key was compromised but not the user's secret).
+- Note: If `eOTK` is derived from `ECDH(cPrivateKey, auditorPublicKey)`, then compromising the user's `cPrivateKey` reveals past OTKs.
+- Auditor rotation is easier: new transactions just use the new auditor's public key for `AuditReport`s.
 
 ---
 
@@ -775,24 +760,27 @@ cPrivateKey = entropyHash % babyJub.subOrder
 publicKey = cPrivateKey * G
 ```
 
-### Blinding Factor Generation
+### Blinding Factor / OTK Generation
 
 ```typescript
-// Deterministic blinding factor
-blindingFactor = Poseidon([cPrivateKey, nonce])
+// Deterministic One-Time Key (OTK)
+// Previously called blinding factor
+OTK = Poseidon([cPrivateKey, nonce])
 ```
 
 ### Commitment Generation
 
 ```typescript
 // Pedersen commitment
-commitment = Poseidon([amount, blindingFactor])
+commitment = Poseidon([amount, OTK])
 ```
 
 ### Encryption/Decryption
 
 ```typescript
 // Encryption
+// Uses OTK as the key
+key = OTK
 entropy = Poseidon([nonce])
 keystream = Poseidon([key, entropy])
 ciphertext = plaintext + keystream // Field addition

@@ -37,12 +37,12 @@ echo "[2/3] Setting up PLONK keys..."
 mkdir -p "$KEYS_DIR/$CIRCUIT_NAME"
 npx snarkjs plonk setup "$HELPERS_DIR/$CIRCUIT_NAME.r1cs" "powersOfTau28_hez_final_16.ptau" "$KEYS_DIR/$CIRCUIT_NAME/${CIRCUIT_NAME}_final.zkey"
 
-# 2.5 Remove the .r1cs files
-echo "[2.5/3] Removing .r1cs files..."
+# 3 Remove the .r1cs files
+echo "[3/3] Removing .r1cs files..."
 rm -f "$HELPERS_DIR/$CIRCUIT_NAME.r1cs"
 
-# 3. Generate the verifier contract
-echo "[3/3] Generating verifier contract..."
+# 4. Generate the verifier contract
+echo "[4/4] Generating verifier contract..."
 mkdir -p $VERIFIER_DIR
 npx snarkjs zkey export solidityverifier "$KEYS_DIR/$CIRCUIT_NAME/${CIRCUIT_NAME}_final.zkey" "$VERIFIER_DIR/${VERIFIER_NAME}.sol"
 
