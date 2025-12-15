@@ -1,5 +1,5 @@
 import hre from "hardhat"
-import { ConfidentialTransfersSDK } from "../../packages/sdk/src/index.js"
+import { SDK } from "../../packages/sdk/src/index.js"
 import {
   getProofFilenameForColdTest,
   PROOFS_DIR,
@@ -27,7 +27,7 @@ export async function baseSetupUninitializedUsers() {
 
   const MOCK_PROOF_OUTPUT: ProofOutput = {
     proof: Array(24).fill(BigInt(0)),
-    pubSignals: Array(10).fill(BigInt(0)),
+    pubSignals: Array(8).fill(BigInt(0)),
   }
 
   const getVerifierPath = (name: string) =>
@@ -74,16 +74,12 @@ export async function baseSetupUninitializedUsers() {
   await token.mint(user1.address, INITIAL_BALANCE)
   await token.mint(user2.address, INITIAL_BALANCE)
 
-  const sdk = new ConfidentialTransfersSDK(
-    await token.getAddress(),
-    ethers.provider as any,
-    {
-      paths: {
-        helpers: fs.realpathSync("packages/sdk/artifacts/proofs-helpers"),
-        keys: fs.realpathSync("packages/sdk/keys"),
-      },
-    }
-  )
+  const sdk = new SDK(await token.getAddress(), ethers.provider as any, {
+    paths: {
+      helpers: fs.realpathSync("packages/sdk/artifacts/proofs-helpers"),
+      keys: fs.realpathSync("packages/sdk/keys"),
+    },
+  })
 
   const cInit = async (
     _type: "hot" | "cold",
@@ -91,10 +87,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateInitProof(
         await sdk.getCircuitInputsForInit(cPrivateKey)
       )
@@ -118,10 +113,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateUpdateProof(
         await sdk.getCircuitInputsForDeposit(user.address, cPrivateKey, amount)
       )
@@ -146,10 +140,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateUpdateProof(
         await sdk.getCircuitInputsForWithdraw(user.address, cPrivateKey, amount)
       )
@@ -175,10 +168,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateTransferProof(
         await sdk.getCircuitInputsForTransfer(
           user.address,
@@ -208,10 +200,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateApplyProof(
         await sdk.getCircuitInputsForApply(
           user.address,
@@ -243,10 +234,9 @@ export async function baseSetupUninitializedUsers() {
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
       proofOutput = await sdk.generateApplyAndTransferProof(
         await sdk.getCircuitInputsForApplyAndTransfer(
           user.address,
@@ -273,10 +263,6 @@ export async function baseSetupUninitializedUsers() {
     )
     await token.connect(user).cApplyAndTransfer(params)
     return proofOutput
-  }
-
-  const setAuditor = async (user: BaseWallet) => {
-    await token.connect(user).setAuditor(user.address)
   }
 
   const getNonce = async (user: BaseWallet) => {
@@ -309,14 +295,12 @@ export async function baseSetupUninitializedUsers() {
     return filename
   }
 
-  const { cPrivateKey: user1CPrivateKey } =
-    await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(user1.privateKey)
-    )
-  const { cPrivateKey: user2CPrivateKey } =
-    await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(user2.privateKey)
-    )
+  const { cPrivateKey: user1CPrivateKey } = await SDK.deriveConfidentialKeys(
+    BigInt(user1.privateKey)
+  )
+  const { cPrivateKey: user2CPrivateKey } = await SDK.deriveConfidentialKeys(
+    BigInt(user2.privateKey)
+  )
 
   return {
     conn,
@@ -331,20 +315,19 @@ export async function baseSetupUninitializedUsers() {
     initVerifier: iv,
     applyVerifier: av,
     sdk,
-    ConfidentialTransfersSDK,
     INITIAL_BALANCE,
     PROOFS_DIR,
     DEPOSIT_AMOUNT,
     WITHDRAW_AMOUNT,
     TRANSFER_AMOUNT,
     MOCK_PROOF_OUTPUT,
+    SDK,
     cInit,
     cDeposit,
     cWithdraw,
     cTransfer,
     cApply,
     cApplyAndTransfer,
-    setAuditor,
     getFilename,
     getNonce,
     getProofOutput,
@@ -366,11 +349,5 @@ export async function baseSetup() {
     await s.cInit("hot", s.user2)
   }
 
-  return s
-}
-
-export async function baseSetupWithAuditor() {
-  const s = await baseSetup()
-  await s.setAuditor(s.user1)
   return s
 }

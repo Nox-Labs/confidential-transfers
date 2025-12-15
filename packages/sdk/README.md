@@ -17,13 +17,13 @@ npm install @nox-labs/confidential-transfers-sdk
 1. Import the package:
 
 ```typescript
-import { ConfidentialTransfersSDK } from "@nox-labs/confidential-transfers-sdk"
+import { SDK } from "@nox-labs/confidential-transfers-sdk"
 ```
 
 2. Initialize the SDK:
 
 ```typescript
-const sdk = new ConfidentialTransfersSDK(contractAddress, provider, {
+const sdk = new SDK(contractAddress, provider, {
   paths: {
     helpers: "@nox-labs/confidential-transfers-sdk/artifacts/proofs-helpers",
     keys: "<path to downloaded zk keys>",
@@ -35,7 +35,7 @@ const sdk = new ConfidentialTransfersSDK(contractAddress, provider, {
 
 ```typescript
 const { cPrivateKey, cPublicKey_X, cPublicKey_Y } =
-  await ConfidentialTransfersSDK.deriveConfidentialKeys(entropy)
+  await SDK.deriveConfidentialKeys(entropy)
 ```
 
 > The `entropy` could be any string, but it's should be somehow derived from the user's private key or private key should be involved in the derivation. We recommend two options:

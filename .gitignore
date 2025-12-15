@@ -2,10 +2,9 @@
 cache/
 out/
 
-# Ignores development broadcast logs
-broadcast
+broadcast/
+coverage/
 
-# Dotenv file
 .env
 
 node_modules/

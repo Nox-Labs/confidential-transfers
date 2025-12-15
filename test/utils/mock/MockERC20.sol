@@ -4,13 +4,13 @@ pragma solidity ^0.8.28;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {ConfidentialTransfers} from "../../src/ConfidentialTransfers.sol";
+import {ConfidentialTransfers} from "../../../src/ConfidentialTransfers.sol";
 
-import {PlonkVerifier as UpdatePlonkVerifier} from "../../src/verifiers/UpdatePlonkVerifier.sol";
-import {PlonkVerifier as TransferPlonkVerifier} from "../../src/verifiers/TransferPlonkVerifier.sol";
-import {PlonkVerifier as InitPlonkVerifier} from "../../src/verifiers/InitPlonkVerifier.sol";
-import {PlonkVerifier as ApplyPlonkVerifier} from "../../src/verifiers/ApplyPlonkVerifier.sol";
-import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
+import {PlonkVerifier as UpdatePlonkVerifier} from "../../../src/verifiers/UpdatePlonkVerifier.sol";
+import {PlonkVerifier as TransferPlonkVerifier} from "../../../src/verifiers/TransferPlonkVerifier.sol";
+import {PlonkVerifier as InitPlonkVerifier} from "../../../src/verifiers/InitPlonkVerifier.sol";
+import {PlonkVerifier as ApplyPlonkVerifier} from "../../../src/verifiers/ApplyPlonkVerifier.sol";
+import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../../../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
 
 contract MockERC20 is ERC20, ConfidentialTransfers, Ownable {
     constructor(
@@ -38,6 +38,4 @@ contract MockERC20 is ERC20, ConfidentialTransfers, Ownable {
     function _cTransfer(address from, address to, uint256 amount) internal override {
         _transfer(from, to, amount);
     }
-
-    function _authorizeAuditorChange() internal override {}
 }

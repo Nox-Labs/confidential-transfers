@@ -7,19 +7,26 @@ export const api = {
     return response.data
   },
 
-  init: async (userId: string, signature: string) => {
+  init: async (userId: string, signature: string, auditors?: string[]) => {
     const response = await axios.post(`${config.apiUrl}/init`, {
       userId,
       signature,
+      auditors,
     })
     return response.data
   },
 
-  deposit: async (userId: string, signature: string, amount: string) => {
+  deposit: async (
+    userId: string,
+    signature: string,
+    amount: string,
+    auditors?: string[]
+  ) => {
     const response = await axios.post(`${config.apiUrl}/deposit`, {
       userId,
       signature,
       amount,
+      auditors,
     })
     return response.data
   },
@@ -28,22 +35,30 @@ export const api = {
     userId: string,
     signature: string,
     to: string,
-    amount: string
+    amount: string,
+    auditors?: string[]
   ) => {
     const response = await axios.post(`${config.apiUrl}/transfer`, {
       userId,
       signature,
       to,
       amount,
+      auditors,
     })
     return response.data
   },
 
-  withdraw: async (userId: string, signature: string, amount: string) => {
+  withdraw: async (
+    userId: string,
+    signature: string,
+    amount: string,
+    auditors?: string[]
+  ) => {
     const response = await axios.post(`${config.apiUrl}/withdraw`, {
       userId,
       signature,
       amount,
+      auditors,
     })
     return response.data
   },
@@ -51,12 +66,14 @@ export const api = {
   apply: async (
     userId: string,
     signature: string,
-    pendingTransfersIndexes: number[]
+    pendingTransfersIndexes: number[],
+    auditors?: string[]
   ) => {
     const response = await axios.post(`${config.apiUrl}/apply`, {
       userId,
       signature,
       pendingTransfersIndexes,
+      auditors,
     })
     return response.data
   },
@@ -66,7 +83,8 @@ export const api = {
     signature: string,
     pendingTransfersIndexes: number[],
     to: string,
-    amount: string
+    amount: string,
+    auditors?: string[]
   ) => {
     const response = await axios.post(`${config.apiUrl}/applyAndTransfer`, {
       userId,
@@ -74,6 +92,7 @@ export const api = {
       pendingTransfersIndexes,
       to,
       amount,
+      auditors,
     })
     return response.data
   },

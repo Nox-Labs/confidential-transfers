@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { ethers } from "ethers"
 import {
   ConfidentialTransfers,
-  ConfidentialTransfersSDK,
+  SDK,
   ERC20,
   cInitParams,
   confidentialTransfersAbi,
@@ -59,6 +59,34 @@ export default function Home() {
   const [transferTo, setTransferTo] = useState("")
   const [applyAndTransferAmount, setApplyAndTransferAmount] = useState("10")
   const [applyAndTransferTo, setApplyAndTransferTo] = useState("")
+  const [auditorInput, setAuditorInput] = useState("")
+  const [auditorsList, setAuditorsList] = useState<string[]>([])
+
+  // Auditor View State
+  const [auditorViewAddress, setAuditorViewAddress] = useState("")
+  const [auditedState, setAuditedState] = useState<any>(null)
+
+  const getAuditors = () => {
+    return auditorsList
+  }
+
+  const handleAddAuditor = () => {
+    if (!ethers.isAddress(auditorInput)) {
+      setStatus("Invalid auditor address")
+      return
+    }
+    if (auditorsList.includes(auditorInput)) {
+      setStatus("Auditor already added")
+      return
+    }
+    setAuditorsList([...auditorsList, auditorInput])
+    setAuditorInput("")
+    setStatus("")
+  }
+
+  const handleRemoveAuditor = (addr: string) => {
+    setAuditorsList(auditorsList.filter((a) => a !== addr))
+  }
 
   useEffect(() => {
     if (signer) {
@@ -110,25 +138,33 @@ export default function Home() {
       // Extract all state fields
       const state = {
         nonce: data.state.nonce.toString(),
-        pubKey_X: data.state.pubKey_X.toString(),
-        pubKey_Y: data.state.pubKey_Y.toString(),
+        pubKey_X: data.pubKey_X.toString(),
+        pubKey_Y: data.pubKey_Y.toString(),
         commitment: data.state.commitment.toString(),
         eAmount: data.state.eAmount.toString(),
-        eAmountForAuditor: data.state.eAmountForAuditor.toString(),
       }
+
+      // Format audit reports
+      const auditReports = data.auditReports.map((ar: any) => ({
+        auditor: ar.auditor,
+        encryptedOTK: ar.eOTK.toString(),
+      }))
 
       // Format pending transfers
       const pendingTransfers = data.pendingTransfers.map((pt: any) => ({
-        nonce: pt.nonce.toString(),
-        pubKey_X: pt.pubKey_X.toString(),
-        pubKey_Y: pt.pubKey_Y.toString(),
-        commitment: pt.commitment.toString(),
-        eAmount: pt.eAmount.toString(),
-        eAmountForAuditor: pt.eAmountForAuditor.toString(),
+        sender: pt.sender,
+        nonce: pt.payload.nonce.toString(),
+        commitment: pt.payload.commitment.toString(),
+        eAmount: pt.payload.eAmount.toString(),
+        auditReports: pt.auditReports.map((ar: any) => ({
+          auditor: ar.auditor,
+          encryptedOTK: ar.eOTK.toString(),
+        })),
       }))
 
       setAccountState({
         state,
+        auditReports,
         pendingTransfers,
         pendingCount: pendingTransfers.length,
       })
@@ -211,19 +247,16 @@ export default function Home() {
       // Derive cPrivateKey from signature (same as backend)
       // Backend uses BigInt(signature) directly, so we need to convert hex string to BigInt
       const entropyForKeys = BigInt(sig)
-      const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-        entropyForKeys
-      )
+      const keys = await SDK.deriveConfidentialKeys(entropyForKeys)
 
       const decrypted: any = {
         state: {
           ...accountData.state,
           nonce: accountData.state.nonce.toString(),
-          pubKey_X: accountData.state.pubKey_X.toString(),
-          pubKey_Y: accountData.state.pubKey_Y.toString(),
+          pubKey_X: accountData.pubKey_X.toString(),
+          pubKey_Y: accountData.pubKey_Y.toString(),
           commitment: accountData.state.commitment.toString(),
           eAmount: accountData.state.eAmount.toString(),
-          eAmountForAuditor: accountData.state.eAmountForAuditor.toString(),
         },
         pendingTransfers: [],
       }
@@ -231,24 +264,21 @@ export default function Home() {
       // Decrypt state amount
       if (BigInt(accountData.state.commitment) !== BigInt(0)) {
         try {
-          const amount = await ConfidentialTransfersSDK.decryptAmount(
+          const amount = await SDK.decryptAmount(
             keys.cPrivateKey,
             BigInt(accountData.state.nonce),
             BigInt(accountData.state.eAmount)
           )
-          const bf = await ConfidentialTransfersSDK.generateBlindingFactor(
+          const otk = await SDK.generateOTK(
             keys.cPrivateKey,
             BigInt(accountData.state.nonce)
           )
-          const commitment = await ConfidentialTransfersSDK.generateCommitment(
-            amount,
-            bf
-          )
+          const commitment = await SDK.generateCommitment(amount, otk)
 
           decrypted.state.decryptedAmount = (
             amount / BigInt(10 ** 18)
           ).toString()
-          decrypted.state.blindingFactor = bf.toString()
+          decrypted.state.otk = otk.toString()
           decrypted.state.calculatedCommitment = commitment.toString()
           decrypted.state.commitmentMatches =
             commitment.toString() === accountData.state.commitment.toString()
@@ -257,54 +287,50 @@ export default function Home() {
         }
       }
 
+      const { pubKey_Xs, pubKey_Ys } = await contract!.getCPublicKeys(
+        accountData.pendingTransfers.map((pt: any) => pt.sender)
+      )
+
       // Decrypt pending transfers
       for (let i = 0; i < accountData.pendingTransfers.length; i++) {
         const pt = accountData.pendingTransfers[i]
         try {
           // Derive shared key with sender
-          const sharedKey = await ConfidentialTransfersSDK.deriveSharedKey(
+          const sharedKey = await SDK.deriveSharedKey(
             keys.cPrivateKey,
-            BigInt(pt.pubKey_X),
-            BigInt(pt.pubKey_Y)
+            BigInt(pubKey_Xs[i]),
+            BigInt(pubKey_Ys[i])
           )
-          const amount = await ConfidentialTransfersSDK.decryptAmount(
+          const amount = await SDK.decryptAmount(
             sharedKey,
-            BigInt(pt.nonce),
-            BigInt(pt.eAmount)
+            BigInt(pt.payload.nonce),
+            BigInt(pt.payload.eAmount)
           )
-          const bf = await ConfidentialTransfersSDK.generateBlindingFactor(
-            sharedKey,
-            BigInt(pt.nonce)
-          )
-          const commitment = await ConfidentialTransfersSDK.generateCommitment(
-            amount,
-            bf
-          )
+          const otk = await SDK.generateOTK(sharedKey, BigInt(pt.payload.nonce))
+          const commitment = await SDK.generateCommitment(amount, otk)
 
           decrypted.pendingTransfers.push({
             index: i,
-            nonce: pt.nonce.toString(),
-            pubKey_X: pt.pubKey_X.toString(),
-            pubKey_Y: pt.pubKey_Y.toString(),
-            commitment: pt.commitment.toString(),
-            eAmount: pt.eAmount.toString(),
-            eAmountForAuditor: pt.eAmountForAuditor.toString(),
+            nonce: pt.payload.nonce.toString(),
+            pubKey_X: pubKey_Xs[i].toString(),
+            pubKey_Y: pubKey_Ys[i].toString(),
+            commitment: pt.payload.commitment.toString(),
+            eAmount: pt.payload.eAmount.toString(),
             decryptedAmount: (amount / BigInt(10 ** 18)).toString(),
-            blindingFactor: bf.toString(),
+            otk: otk.toString(),
             calculatedCommitment: commitment.toString(),
             commitmentMatches:
-              commitment.toString() === pt.commitment.toString(),
+              commitment.toString() === pt.payload.commitment.toString(),
           })
         } catch (e) {
           console.error(`Failed to decrypt pending transfer ${i}:`, e)
           decrypted.pendingTransfers.push({
             index: i,
-            nonce: pt.nonce.toString(),
-            pubKey_X: pt.pubKey_X.toString(),
-            pubKey_Y: pt.pubKey_Y.toString(),
-            commitment: pt.commitment.toString(),
-            eAmount: pt.eAmount.toString(),
-            eAmountForAuditor: pt.eAmountForAuditor.toString(),
+            nonce: pt.payload.nonce.toString(),
+            pubKey_X: pubKey_Xs[i].toString(),
+            pubKey_Y: pubKey_Ys[i].toString(),
+            commitment: pt.payload.commitment.toString(),
+            eAmount: pt.payload.eAmount.toString(),
             error: "Failed to decrypt",
           })
         }
@@ -363,7 +389,11 @@ export default function Home() {
       }
 
       setStatus("Generating Init Proof...")
-      const params = (await api.init(address, signature)) as cInitParams
+      const params = (await api.init(
+        address,
+        signature,
+        getAuditors()
+      )) as cInitParams
 
       if (!params || !params.artifacts) {
         setStatus("Error: Failed to generate proof parameters")
@@ -441,7 +471,8 @@ export default function Home() {
       const params = await api.deposit(
         address,
         signature,
-        (BigInt(depositAmount) * BigInt(10 ** 18)).toString()
+        (BigInt(depositAmount) * BigInt(10 ** 18)).toString(),
+        getAuditors()
       )
 
       setStatus("Sending Deposit Transaction...")
@@ -469,8 +500,11 @@ export default function Home() {
         address,
         signature,
         transferTo,
-        (BigInt(transferAmount) * BigInt(10 ** 18)).toString()
+        (BigInt(transferAmount) * BigInt(10 ** 18)).toString(),
+        getAuditors()
       )
+
+      console.log("Transfer params:", params)
 
       setStatus("Sending Transfer Transaction...")
       const tx = await contract.cTransfer(params)
@@ -496,7 +530,8 @@ export default function Home() {
       const params = await api.withdraw(
         address,
         signature,
-        (BigInt(withdrawAmount) * BigInt(10 ** 18)).toString()
+        (BigInt(withdrawAmount) * BigInt(10 ** 18)).toString(),
+        getAuditors()
       )
 
       setStatus("Sending Withdraw Transaction...")
@@ -532,7 +567,12 @@ export default function Home() {
     try {
       setLoading(true)
       setStatus("Generating Apply Proof...")
-      const params = await api.apply(address, signature, indexesToApply)
+      const params = await api.apply(
+        address,
+        signature,
+        indexesToApply,
+        getAuditors()
+      )
 
       if (params.message) {
         setStatus(params.message)
@@ -583,7 +623,8 @@ export default function Home() {
         signature,
         indexesToApply,
         applyAndTransferTo,
-        (BigInt(applyAndTransferAmount) * BigInt(10 ** 18)).toString()
+        (BigInt(applyAndTransferAmount) * BigInt(10 ** 18)).toString(),
+        getAuditors()
       )
 
       if (params.message) {
@@ -607,6 +648,108 @@ export default function Home() {
       setStatus(`Error: ${e.message}`)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAuditedState = async () => {
+    if (!contract || !address || !signature || !auditorViewAddress) return
+    try {
+      const data = await contract.getAccount(auditorViewAddress)
+
+      const entropyForKeys = BigInt(signature)
+      const keys = await SDK.deriveConfidentialKeys(entropyForKeys)
+
+      const audited: any = {
+        state: null,
+        pendingTransfers: [],
+      }
+
+      // State Audit
+      const stateReport = data.auditReports.find(
+        (ar: any) => ar.auditor.toLowerCase() === address.toLowerCase()
+      )
+
+      if (stateReport) {
+        try {
+          const sharedKey = await SDK.deriveSharedKey(
+            keys.cPrivateKey,
+            BigInt(data.pubKey_X),
+            BigInt(data.pubKey_Y)
+          )
+          const otk = await SDK.decipher(
+            sharedKey,
+            BigInt(data.state.nonce),
+            BigInt(stateReport.eOTK)
+          )
+          const amount = await SDK.decipher(
+            otk,
+            BigInt(data.state.nonce),
+            BigInt(data.state.eAmount)
+          )
+          audited.state = {
+            decryptedAmount: (amount / BigInt(10 ** 18)).toString(),
+            otk: otk.toString(),
+          }
+        } catch (e) {
+          console.error("Auditor decrypt state failed", e)
+          audited.state = { error: "Failed to decrypt" }
+        }
+      }
+
+      // Pending Transfers Audit
+      console.log(
+        "Pending transfers111",
+        data.pendingTransfers.map((pt: any) =>
+          pt.auditReports.map((ar: any) => ar.auditor)
+        )
+      )
+      for (let i = 0; i < data.pendingTransfers.length; i++) {
+        const pt = data.pendingTransfers[i]
+        console.log(
+          "Pending transfer",
+          pt.auditReports.map((ar: any) => ar.auditor)
+        )
+        const ptReport = pt.auditReports.find(
+          (ar: any) => ar.auditor.toLowerCase() === address.toLowerCase()
+        )
+
+        if (ptReport) {
+          try {
+            const keysRes = await contract.getCPublicKeys([pt.sender])
+            const senderPubX = keysRes.pubKey_Xs[0]
+            const senderPubY = keysRes.pubKey_Ys[0]
+
+            const sharedKey = await SDK.deriveSharedKey(
+              keys.cPrivateKey,
+              BigInt(senderPubX),
+              BigInt(senderPubY)
+            )
+
+            const otk = await SDK.decipher(
+              sharedKey,
+              BigInt(pt.payload.nonce),
+              BigInt(ptReport.eOTK)
+            )
+
+            const amount = await SDK.decipher(
+              otk,
+              BigInt(pt.payload.nonce),
+              BigInt(pt.payload.eAmount)
+            )
+
+            audited.pendingTransfers.push({
+              index: i,
+              decryptedAmount: (amount / BigInt(10 ** 18)).toString(),
+            })
+          } catch (e) {
+            audited.pendingTransfers.push({ index: i, error: "Failed" })
+          }
+        }
+      }
+
+      setAuditedState(audited)
+    } catch (e) {
+      console.error("Fetch audited state error", e)
     }
   }
 
@@ -649,393 +792,571 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Balances & Mint */}
-              <div className="space-y-4">
-                {/* Balances */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="text-lg font-bold mb-4 border-b border-gray-600 pb-2">
-                    Token Balances
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <span className="text-gray-500 block mb-1">
-                        Your Public Balance:
-                      </span>
-                      <div className="font-mono text-green-400 text-lg font-bold">
-                        {publicBalance}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block mb-1">
-                        Total Supply:
-                      </span>
-                      <div className="font-mono text-blue-400 text-lg font-bold">
-                        {totalSupply}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block mb-1">
-                        Contract Balance (Confidential):
-                      </span>
-                      <div className="font-mono text-purple-400 text-lg font-bold">
-                        {contractBalance}
-                      </div>
-                    </div>
-                    {decryptedState?.state?.decryptedAmount && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Balances & Mint */}
+                <div className="space-y-4">
+                  {/* Balances */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="text-lg font-bold mb-4 border-b border-gray-600 pb-2">
+                      Token Balances
+                    </h3>
+                    <div className="space-y-3 text-sm">
                       <div>
                         <span className="text-gray-500 block mb-1">
-                          Your Confidential Balance:
+                          Your Public Balance:
                         </span>
-                        <div className="font-mono text-cyan-400 text-lg font-bold">
-                          {decryptedState.state.decryptedAmount}
+                        <div className="font-mono text-green-400 text-lg font-bold">
+                          {publicBalance}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mint */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-4">Mint Tokens</h3>
-                  <input
-                    type="number"
-                    value={mintAmount}
-                    onChange={(e) => setMintAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white"
-                    placeholder="Amount"
-                  />
-                  <button
-                    onClick={handleMint}
-                    disabled={loading}
-                    className="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold"
-                  >
-                    Mint
-                  </button>
-                </div>
-              </div>
-              {/* Middle Column: Account State */}
-              <div className="lg:col-span-1">
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 h-full overflow-y-auto max-h-[calc(100vh-250px)]">
-                  <h3 className="text-lg font-bold mb-4 border-b border-gray-600 pb-2">
-                    Account State
-                  </h3>
-                  {accountState ? (
-                    <div className="space-y-3 text-xs">
-                      {/* State Info */}
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-blue-400 text-sm">
-                          State
-                        </h4>
-                        <div className="grid grid-cols-1 gap-1">
-                          <div>
-                            <span className="text-gray-500">Nonce:</span>
-                            <div className="font-mono text-green-400">
-                              {accountState.state.nonce}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Commitment:</span>
-                            <div className="font-mono text-gray-300 break-all bg-gray-900 p-1 rounded text-xs">
-                              {accountState.state.commitment}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">
-                              Encrypted Amount:
-                            </span>
-                            <div className="font-mono text-yellow-400 break-all bg-gray-900 p-1 rounded text-xs">
-                              {accountState.state.eAmount}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">
-                              Encrypted (Auditor):
-                            </span>
-                            <div className="font-mono text-yellow-400 break-all bg-gray-900 p-1 rounded text-xs">
-                              {accountState.state.eAmountForAuditor}
-                            </div>
-                          </div>
+                      <div>
+                        <span className="text-gray-500 block mb-1">
+                          Total Supply:
+                        </span>
+                        <div className="font-mono text-blue-400 text-lg font-bold">
+                          {totalSupply}
                         </div>
                       </div>
-
-                      {/* Decrypted Info */}
-                      {decryptedState?.state && (
-                        <div className="space-y-2 pt-3 border-t border-gray-700">
-                          <h4 className="font-semibold text-green-400 text-sm">
-                            Decrypted
-                          </h4>
-                          <div>
-                            <span className="text-gray-500">Amount:</span>
-                            <div className="font-mono text-green-400 text-base font-bold">
-                              {decryptedState.state.decryptedAmount || "N/A"}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Valid:</span>
-                            <div
-                              className={`font-mono ${
-                                decryptedState.state.commitmentMatches
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {decryptedState.state.commitmentMatches
-                                ? "✓"
-                                : "✗"}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 block mb-1 text-xs">
-                              Blinding Factor:
-                            </span>
-                            <div className="font-mono text-purple-400 text-xs break-all bg-gray-900 p-1 rounded">
-                              {decryptedState.state.blindingFactor}
-                            </div>
-                            <div className="text-xs text-gray-400 italic mt-1">
-                              BF = Poseidon(cPrivateKey, nonce)
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 block mb-1 text-xs">
-                              Calculated Commitment:
-                            </span>
-                            <div className="font-mono text-cyan-400 text-xs break-all bg-gray-900 p-1 rounded">
-                              {decryptedState.state.calculatedCommitment}
-                            </div>
-                            <div className="text-xs text-gray-400 italic mt-1">
-                              Commitment = Poseidon(amount, blindingFactor)
-                            </div>
+                      <div>
+                        <span className="text-gray-500 block mb-1">
+                          Contract Balance (Confidential):
+                        </span>
+                        <div className="font-mono text-purple-400 text-lg font-bold">
+                          {contractBalance}
+                        </div>
+                      </div>
+                      {decryptedState?.state?.decryptedAmount && (
+                        <div>
+                          <span className="text-gray-500 block mb-1">
+                            Your Confidential Balance:
+                          </span>
+                          <div className="font-mono text-cyan-400 text-lg font-bold">
+                            {decryptedState.state.decryptedAmount}
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
 
-                      {/* Pending Transfers */}
-                      <div className="space-y-2 pt-3 border-t border-gray-700">
-                        <h4 className="font-semibold text-orange-400 text-sm">
-                          Pending ({accountState.pendingCount})
-                        </h4>
-                        {accountState.pendingTransfers.length === 0 ? (
-                          <p className="text-gray-500 text-xs">None</p>
-                        ) : (
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {accountState.pendingTransfers.map(
-                              (pt: any, idx: number) => {
-                                const decrypted =
-                                  decryptedState?.pendingTransfers?.find(
-                                    (d: any) => d.index === idx
-                                  )
-                                const isSelected =
-                                  selectedPendingIndexes.includes(idx)
-                                return (
-                                  <div
-                                    key={idx}
-                                    className={`bg-gray-900 p-2 rounded border ${
-                                      isSelected
-                                        ? "border-green-500 bg-gray-800"
-                                        : "border-gray-700"
-                                    }`}
-                                  >
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setSelectedPendingIndexes([
-                                                  ...selectedPendingIndexes,
-                                                  idx,
-                                                ])
-                                              } else {
-                                                setSelectedPendingIndexes(
-                                                  selectedPendingIndexes.filter(
-                                                    (i) => i !== idx
-                                                  )
-                                                )
-                                              }
-                                            }}
-                                            className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
-                                          />
-                                          <span className="text-gray-500 text-xs">
-                                            #{idx}
+                  {/* Mint */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-4">Mint Tokens</h3>
+                    <input
+                      type="number"
+                      value={mintAmount}
+                      onChange={(e) => setMintAmount(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={handleMint}
+                      disabled={loading}
+                      className="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold"
+                    >
+                      Mint
+                    </button>
+                  </div>
+
+                  {/* Auditors */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-4">Auditors</h3>
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        value={auditorInput}
+                        onChange={(e) => setAuditorInput(e.target.value)}
+                        className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-white text-xs"
+                        placeholder="0x..."
+                      />
+                      <button
+                        onClick={handleAddAuditor}
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {auditorsList.length > 0 ? (
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {auditorsList.map((auditor) => (
+                          <div
+                            key={auditor}
+                            className="flex justify-between items-center bg-gray-900 p-2 rounded border border-gray-700"
+                          >
+                            <span className="text-xs font-mono text-gray-300 truncate mr-2">
+                              {auditor.slice(0, 6)}...{auditor.slice(-4)}
+                            </span>
+                            <button
+                              onClick={() => handleRemoveAuditor(auditor)}
+                              className="text-red-400 hover:text-red-300 text-xs font-bold px-2"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">
+                        No auditors added.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {/* Middle Column: Account State */}
+                <div className="lg:col-span-1">
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 h-full overflow-y-auto max-h-[calc(100vh-250px)]">
+                    <h3 className="text-lg font-bold mb-4 border-b border-gray-600 pb-2">
+                      Account State
+                    </h3>
+                    {accountState ? (
+                      <div className="space-y-3 text-xs">
+                        {/* State Info */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-blue-400 text-sm">
+                            State
+                          </h4>
+                          <div className="grid grid-cols-1 gap-1">
+                            <div>
+                              <span className="text-gray-500">Nonce:</span>
+                              <div className="font-mono text-green-400">
+                                {accountState.state.nonce}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Commitment:</span>
+                              <div className="font-mono text-gray-300 break-all bg-gray-900 p-1 rounded text-xs">
+                                {accountState.state.commitment}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">
+                                Encrypted Amount:
+                              </span>
+                              <div className="font-mono text-yellow-400 break-all bg-gray-900 p-1 rounded text-xs">
+                                {accountState.state.eAmount}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">
+                                Audit Reports:
+                              </span>
+                              {accountState.auditReports?.length > 0 ? (
+                                <div className="space-y-1 mt-1">
+                                  {accountState.auditReports.map(
+                                    (ar: any, idx: number) => (
+                                      <div
+                                        key={idx}
+                                        className="bg-gray-900 p-1 rounded text-[10px] border border-gray-700"
+                                      >
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-500">
+                                            Aud:
+                                          </span>
+                                          <span className="font-mono text-gray-300">
+                                            {ar.auditor.slice(0, 6)}...
                                           </span>
                                         </div>
-                                        {decrypted?.decryptedAmount ? (
-                                          <span className="font-mono text-green-400 font-bold text-sm">
-                                            Amount: {decrypted.decryptedAmount}
-                                          </span>
-                                        ) : (
-                                          <span className="text-gray-500 text-xs">
-                                            (encrypted)
-                                          </span>
-                                        )}
+                                        <div
+                                          className="font-mono text-purple-400 truncate"
+                                          title={ar.encryptedOTK}
+                                        >
+                                          {ar.encryptedOTK.slice(0, 10)}...
+                                        </div>
                                       </div>
-                                      <div className="text-xs">
-                                        <span className="text-gray-500">
-                                          From:{" "}
-                                        </span>
-                                        <span className="font-mono text-blue-400">
-                                          {pt.pubKey_X.slice(0, 10)}...
-                                          {pt.pubKey_X.slice(-8)}
-                                        </span>
-                                      </div>
-                                      <div className="text-xs">
-                                        <span className="text-gray-500">
-                                          Nonce:{" "}
-                                        </span>
-                                        <span className="font-mono text-gray-300">
-                                          {pt.nonce}
-                                        </span>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="font-mono text-gray-500 text-xs">
+                                  None
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Decrypted Info */}
+                        {decryptedState?.state && (
+                          <div className="space-y-2 pt-3 border-t border-gray-700">
+                            <h4 className="font-semibold text-green-400 text-sm">
+                              Decrypted
+                            </h4>
+                            <div>
+                              <span className="text-gray-500">Amount:</span>
+                              <div className="font-mono text-green-400 text-base font-bold">
+                                {decryptedState.state.decryptedAmount || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Valid:</span>
+                              <div
+                                className={`font-mono ${
+                                  decryptedState.state.commitmentMatches
+                                    ? "text-green-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {decryptedState.state.commitmentMatches
+                                  ? "✓"
+                                  : "✗"}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 block mb-1 text-xs">
+                                OTK (One-Time Key):
+                              </span>
+                              <div className="font-mono text-purple-400 text-xs break-all bg-gray-900 p-1 rounded">
+                                {decryptedState.state.otk}
+                              </div>
+                              <div className="text-xs text-gray-400 italic mt-1">
+                                OTK = Poseidon(cPrivateKey, nonce)
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 block mb-1 text-xs">
+                                Calculated Commitment:
+                              </span>
+                              <div className="font-mono text-cyan-400 text-xs break-all bg-gray-900 p-1 rounded">
+                                {decryptedState.state.calculatedCommitment}
+                              </div>
+                              <div className="text-xs text-gray-400 italic mt-1">
+                                Commitment = Poseidon(amount, OTK)
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-400 italic mt-1">
+                                Encrypted Amount = Amount + Poseidon(OTK, nonce)
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pending Transfers */}
+                        <div className="space-y-2 pt-3 border-t border-gray-700">
+                          <h4 className="font-semibold text-orange-400 text-sm">
+                            Pending ({accountState.pendingCount})
+                          </h4>
+                          {accountState.pendingTransfers.length === 0 ? (
+                            <p className="text-gray-500 text-xs">None</p>
+                          ) : (
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {accountState.pendingTransfers.map(
+                                (pt: any, idx: number) => {
+                                  const decrypted =
+                                    decryptedState?.pendingTransfers?.find(
+                                      (d: any) => d.index === idx
+                                    )
+                                  const isSelected =
+                                    selectedPendingIndexes.includes(idx)
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className={`bg-gray-900 p-2 rounded border ${
+                                        isSelected
+                                          ? "border-green-500 bg-gray-800"
+                                          : "border-gray-700"
+                                      }`}
+                                    >
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelected}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setSelectedPendingIndexes([
+                                                    ...selectedPendingIndexes,
+                                                    idx,
+                                                  ])
+                                                } else {
+                                                  setSelectedPendingIndexes(
+                                                    selectedPendingIndexes.filter(
+                                                      (i) => i !== idx
+                                                    )
+                                                  )
+                                                }
+                                              }}
+                                              className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                                            />
+                                            <span className="text-gray-500 text-xs">
+                                              #{idx}
+                                            </span>
+                                          </div>
+                                          {decrypted?.decryptedAmount ? (
+                                            <span className="font-mono text-green-400 font-bold text-sm">
+                                              Amount:{" "}
+                                              {decrypted.decryptedAmount}
+                                            </span>
+                                          ) : (
+                                            <span className="text-gray-500 text-xs">
+                                              (encrypted)
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs">
+                                          <span className="text-gray-500">
+                                            From:{" "}
+                                          </span>
+                                          <span className="font-mono text-blue-400">
+                                            {pt.sender.slice(0, 6)}...
+                                            {pt.sender.slice(-4)}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs">
+                                          <span className="text-gray-500">
+                                            Nonce:{" "}
+                                          </span>
+                                          <span className="font-mono text-gray-300">
+                                            {pt.nonce}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                )
-                              }
+                                  )
+                                }
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">Loading state...</p>
+                    )}
+                  </div>
+                </div>
+                {/* Right Column: Actions */}
+                <div className="space-y-4">
+                  {/* Init */}
+                  {BigInt(accountState?.state?.commitment ?? 0n) ==
+                    BigInt(0) && (
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                      <h3 className="font-bold mb-3 text-sm">Initialize</h3>
+                      <button
+                        onClick={handleInit}
+                        disabled={loading}
+                        className="w-full bg-orange-600 hover:bg-orange-700 py-2 rounded font-bold text-sm"
+                      >
+                        Initialize
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Deposit */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-3 text-sm">Deposit</h3>
+                    <input
+                      type="number"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={handleDeposit}
+                      disabled={loading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold text-sm"
+                    >
+                      Deposit
+                    </button>
+                  </div>
+
+                  {/* Transfer */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-3 text-sm">Transfer</h3>
+                    <input
+                      value={transferTo}
+                      onChange={(e) => setTransferTo(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Recipient (0x...)"
+                    />
+                    <input
+                      type="number"
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={handleTransfer}
+                      disabled={loading}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-bold text-sm"
+                    >
+                      Transfer
+                    </button>
+                  </div>
+
+                  {/* Withdraw */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-3 text-sm">Withdraw</h3>
+                    <input
+                      type="number"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={handleWithdraw}
+                      disabled={loading}
+                      className="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold text-sm"
+                    >
+                      Withdraw
+                    </button>
+                  </div>
+
+                  {/* Apply */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-3 text-sm">Apply Pending</h3>
+                    <div className="mb-2 text-xs text-gray-400">
+                      {selectedPendingIndexes.length > 0
+                        ? `Selected: ${selectedPendingIndexes.length}`
+                        : "Will apply all"}
+                    </div>
+                    <button
+                      onClick={handleApply}
+                      disabled={
+                        loading || (accountState?.pendingCount || 0) === 0
+                      }
+                      className="w-full bg-teal-600 hover:bg-teal-700 py-2 rounded font-bold text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                      Apply
+                    </button>
+                  </div>
+
+                  {/* Apply And Transfer */}
+                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <h3 className="font-bold mb-3 text-sm">Apply & Transfer</h3>
+                    <div className="mb-2 text-xs text-gray-400">
+                      {selectedPendingIndexes.length > 0
+                        ? `Selected: ${selectedPendingIndexes.length}`
+                        : "Will apply all"}
+                    </div>
+                    <input
+                      value={applyAndTransferTo}
+                      onChange={(e) => setApplyAndTransferTo(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Recipient (0x...)"
+                    />
+                    <input
+                      type="number"
+                      value={applyAndTransferAmount}
+                      onChange={(e) =>
+                        setApplyAndTransferAmount(e.target.value)
+                      }
+                      className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={handleApplyAndTransfer}
+                      disabled={
+                        loading ||
+                        (accountState?.pendingCount || 0) === 0 ||
+                        !applyAndTransferTo
+                      }
+                      className="w-full bg-cyan-600 hover:bg-cyan-700 py-2 rounded font-bold text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                      Apply & Transfer
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Auditor View Section */}
+              <div className="mt-8 bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h2 className="text-xl font-bold mb-4 border-b border-gray-600 pb-2">
+                  Auditor View
+                </h2>
+                <div className="flex gap-4 mb-4">
+                  <input
+                    value={auditorViewAddress}
+                    onChange={(e) => setAuditorViewAddress(e.target.value)}
+                    className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-white font-mono text-sm"
+                    placeholder="Enter address to audit (0x...)"
+                  />
+                  <button
+                    onClick={fetchAuditedState}
+                    className="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded font-bold"
+                  >
+                    Audit
+                  </button>
+                </div>
+
+                {auditedState && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-900 p-4 rounded border border-gray-700">
+                        <h3 className="font-bold text-blue-400 mb-2">
+                          State Audit
+                        </h3>
+                        {auditedState.state ? (
+                          auditedState.state.error ? (
+                            <p className="text-red-400">
+                              {auditedState.state.error}
+                            </p>
+                          ) : (
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                <span className="text-gray-500">Amount:</span>{" "}
+                                <span className="font-mono text-green-400 font-bold">
+                                  {auditedState.state.decryptedAmount}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">OTK:</span>{" "}
+                                <span className="font-mono text-gray-400 text-xs break-all">
+                                  {auditedState.state.otk}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No audit report for you found.
+                          </p>
+                        )}
+                      </div>
+                      <div className="bg-gray-900 p-4 rounded border border-gray-700">
+                        <h3 className="font-bold text-orange-400 mb-2">
+                          Pending Transfers Audit
+                        </h3>
+                        {auditedState.pendingTransfers.length > 0 ? (
+                          <div className="space-y-2">
+                            {auditedState.pendingTransfers.map(
+                              (pt: any, i: number) => (
+                                <div
+                                  key={i}
+                                  className="border-b border-gray-800 pb-2 last:border-0"
+                                >
+                                  {pt.error ? (
+                                    <p className="text-red-400 text-sm">
+                                      Transfer #{pt.index}: {pt.error}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm">
+                                      <span className="text-gray-500">
+                                        Transfer #{pt.index}:
+                                      </span>{" "}
+                                      <span className="font-mono text-green-400 font-bold">
+                                        {pt.decryptedAmount}
+                                      </span>
+                                    </p>
+                                  )}
+                                </div>
+                              )
                             )}
                           </div>
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No audited pending transfers found.
+                          </p>
                         )}
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-gray-500">Loading state...</p>
-                  )}
-                </div>
-              </div>
-              {/* Right Column: Actions */}
-              <div className="space-y-4">
-                {/* Init */}
-                {BigInt(accountState?.state?.commitment ?? 0n) == BigInt(0) && (
-                  <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                    <h3 className="font-bold mb-3 text-sm">Initialize</h3>
-                    <button
-                      onClick={handleInit}
-                      disabled={loading}
-                      className="w-full bg-orange-600 hover:bg-orange-700 py-2 rounded font-bold text-sm"
-                    >
-                      Initialize
-                    </button>
                   </div>
                 )}
-
-                {/* Deposit */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-3 text-sm">Deposit</h3>
-                  <input
-                    type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Amount"
-                  />
-                  <button
-                    onClick={handleDeposit}
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold text-sm"
-                  >
-                    Deposit
-                  </button>
-                </div>
-
-                {/* Transfer */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-3 text-sm">Transfer</h3>
-                  <input
-                    value={transferTo}
-                    onChange={(e) => setTransferTo(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Recipient (0x...)"
-                  />
-                  <input
-                    type="number"
-                    value={transferAmount}
-                    onChange={(e) => setTransferAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Amount"
-                  />
-                  <button
-                    onClick={handleTransfer}
-                    disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-bold text-sm"
-                  >
-                    Transfer
-                  </button>
-                </div>
-
-                {/* Withdraw */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-3 text-sm">Withdraw</h3>
-                  <input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Amount"
-                  />
-                  <button
-                    onClick={handleWithdraw}
-                    disabled={loading}
-                    className="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold text-sm"
-                  >
-                    Withdraw
-                  </button>
-                </div>
-
-                {/* Apply */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-3 text-sm">Apply Pending</h3>
-                  <div className="mb-2 text-xs text-gray-400">
-                    {selectedPendingIndexes.length > 0
-                      ? `Selected: ${selectedPendingIndexes.length}`
-                      : "Will apply all"}
-                  </div>
-                  <button
-                    onClick={handleApply}
-                    disabled={
-                      loading || (accountState?.pendingCount || 0) === 0
-                    }
-                    className="w-full bg-teal-600 hover:bg-teal-700 py-2 rounded font-bold text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  >
-                    Apply
-                  </button>
-                </div>
-
-                {/* Apply And Transfer */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                  <h3 className="font-bold mb-3 text-sm">Apply & Transfer</h3>
-                  <div className="mb-2 text-xs text-gray-400">
-                    {selectedPendingIndexes.length > 0
-                      ? `Selected: ${selectedPendingIndexes.length}`
-                      : "Will apply all"}
-                  </div>
-                  <input
-                    value={applyAndTransferTo}
-                    onChange={(e) => setApplyAndTransferTo(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Recipient (0x...)"
-                  />
-                  <input
-                    type="number"
-                    value={applyAndTransferAmount}
-                    onChange={(e) => setApplyAndTransferAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 mb-2 text-white text-sm"
-                    placeholder="Amount"
-                  />
-                  <button
-                    onClick={handleApplyAndTransfer}
-                    disabled={
-                      loading ||
-                      (accountState?.pendingCount || 0) === 0 ||
-                      !applyAndTransferTo
-                    }
-                    className="w-full bg-cyan-600 hover:bg-cyan-700 py-2 rounded font-bold text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  >
-                    Apply & Transfer
-                  </button>
-                </div>
               </div>
-            </div>
+            </>
           )}
         </>
       )}

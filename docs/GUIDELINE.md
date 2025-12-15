@@ -162,14 +162,14 @@ npm install @noxlabs/confidential-transfers-sdk
 ### Basic Setup
 
 ```typescript
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 import { ethers } from "ethers"
 
 // Initialize provider
 const provider = new ethers.JsonRpcProvider("http://localhost:8545")
 
 // Initialize SDK
-const sdk = new ConfidentialTransfersSDK(contractAddress, provider, {
+const sdk = new SDK(contractAddress, provider, {
   paths: {
     helpers: "@noxlabs/confidential-transfers-sdk/artifacts/proofs-helpers",
     keys: "<path-to-zk-keys>", // e.g., "./keys" or absolute path
@@ -182,11 +182,11 @@ const sdk = new ConfidentialTransfersSDK(contractAddress, provider, {
 Before any operation, derive confidential keys from entropy:
 
 ```typescript
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 // Derive keys from entropy (see Entropy Generation section)
 const { cPrivateKey, cPublicKey_X, cPublicKey_Y } =
-  await ConfidentialTransfersSDK.deriveConfidentialKeys(entropy)
+  await SDK.deriveConfidentialKeys(entropy)
 ```
 
 ### Initialize Account
@@ -353,10 +353,10 @@ console.log("Pending Transfers:", account.pendingTransfers.length)
 ### Decrypt Balance
 
 ```typescript
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 // Decrypt encrypted amount
-const decryptedAmount = await ConfidentialTransfersSDK.decryptAmount(
+const decryptedAmount = await SDK.decryptAmount(
   cPrivateKey,
   account.state.nonce,
   account.state.eAmount
@@ -384,7 +384,7 @@ const wallet = new ethers.Wallet(privateKey)
 const entropy = BigInt(wallet.privateKey) // token address can be incuded
 
 const { cPrivateKey, cPublicKey_X, cPublicKey_Y } =
-  await ConfidentialTransfersSDK.deriveConfidentialKeys(entropy)
+  await SDK.deriveConfidentialKeys(entropy)
 ```
 
 **Pros:**
@@ -404,7 +404,7 @@ Generate random entropy, have user sign it, then use the signature:
 
 ```typescript
 import { ethers } from "ethers"
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 
 // Backend: Generate random entropy
 const randomEntropy = ethers.randomBytes(32)
@@ -418,7 +418,7 @@ const signature = await wallet.signMessage(ethers.getBytes(entropyHex))
 // Backend: Use signature as entropy for key derivation
 const entropy = BigInt(signature)
 const { cPrivateKey, cPublicKey_X, cPublicKey_Y } =
-  await ConfidentialTransfersSDK.deriveConfidentialKeys(entropy)
+  await SDK.deriveConfidentialKeys(entropy)
 ```
 
 **Pros:**

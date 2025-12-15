@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {MockERC20} from "../test/mock/MockERC20.sol";
+import {MockERC20} from "../test/utils/mock/MockERC20.sol";
 
 import {PlonkVerifier as UpdatePlonkVerifier} from "../src/verifiers/UpdatePlonkVerifier.sol";
 import {PlonkVerifier as TransferPlonkVerifier} from "../src/verifiers/TransferPlonkVerifier.sol";

@@ -1,68 +1,86 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.28;
 
+struct Payload {
+    uint256 nonce;
+    uint256 commitment;
+    uint256 eAmount;
+}
+
+struct PendingTransfer {
+    address sender;
+    Payload payload;
+    AuditReport[] auditReports;
+}
+
+struct Account {
+    uint256 pubKey_X;
+    uint256 pubKey_Y;
+    Payload state;
+    AuditReport[] auditReports;
+    PendingTransfer[] pendingTransfers;
+}
+
 struct ZKArtifacts {
     uint256[] proof;
     uint256[] outputs;
 }
 
-struct InitParams {
-    /**
-     * @dev artifacts.output should be = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount, eAmountForAuditor]
-     * @dev verifier.pubSignals waiting for = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount, eAmountForAuditor, auditorPublicKey_X, auditorPublicKey_Y]
-     */
-    ZKArtifacts artifacts;
+struct AuditReport {
+    address auditor;
+    uint256 eOTK;
 }
 
-struct ApplyParams {
-    uint256[] pendingTransfersIndexes;
+struct InitParams {
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, eAmountForAuditor]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, eAmountForAuditor, auditorPublicKey_X, auditorPublicKey_Y, n, oldNonce, oldCommitment, ...pendingTransfersCommitments[max]]
+     * @dev artifacts.output should be = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
+     * @dev verifier.pubSignals waiting for = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
      */
     ZKArtifacts artifacts;
+    AuditReport[] stateAuditReports;
 }
 
 struct UpdateParams {
-    uint256 amount;
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, eAmountForAuditor]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, eAmountForAuditor, auditorPublicKey_X, auditorPublicKey_Y, operation, amount, oldNonce, oldCommitment]
+     * @dev artifacts.output should be = [newCommitment, eAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, operation, amount, oldNonce, oldCommitment]
      */
     ZKArtifacts artifacts;
+    uint256 amount;
+    AuditReport[] stateAuditReports;
 }
 
 struct TransferParams {
-    address recipient;
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, eAmountForAuditor, transferCommitment, transferEAmount, transferEAmountForAuditor]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, eAmountForAuditor, transferCommitment, transferEAmount, transferEAmountForAuditor, auditorPublicKey_X, auditorPublicKey_Y, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y]
+     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y]
      */
     ZKArtifacts artifacts;
+    address recipient;
+    AuditReport[] stateAuditReports;
+    AuditReport[] transferAuditReports;
+}
+
+struct ApplyParams {
+    /**
+     * @dev artifacts.output should be = [newCommitment, eAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, n, oldNonce, oldCommitment, ...pendingTransfersCommitments[max]]
+     */
+    ZKArtifacts artifacts;
+    uint256[] pendingTransfersIndexes;
+    AuditReport[] stateAuditReports;
 }
 
 struct ApplyAndTransferParams {
-    address recipient;
-    uint256[] pendingTransfersIndexes;
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, eAmountForAuditor, transferCommitment, transferEAmount, transferEAmountForAuditor]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, eAmountForAuditor, transferCommitment, transferEAmount, transferEAmountForAuditor, auditorPublicKey_X, auditorPublicKey_Y, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y, n, ...pendingTransfersCommitments[max]]
+     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y, n, ...pendingTransfersCommitments[max]]
      */
     ZKArtifacts artifacts;
-}
-
-struct Package {
-    uint256 nonce;
-    uint256 pubKey_X;
-    uint256 pubKey_Y;
-    uint256 commitment;
-    uint256 eAmount; // encrypted amount to be able to recover state any time
-    uint256 eAmountForAuditor; // encrypted amount to be able to recover state any time
-}
-
-struct Account {
-    Package state;
-    Package[] pendingTransfers;
+    address recipient;
+    uint256[] pendingTransfersIndexes;
+    AuditReport[] stateAuditReports;
+    AuditReport[] transferAuditReports;
 }
 
 interface IConfidentialTransfers {
@@ -71,6 +89,22 @@ interface IConfidentialTransfers {
     function cDeposit(UpdateParams calldata updateParams) external;
     function cWithdraw(UpdateParams calldata updateParams) external;
     function cTransfer(TransferParams calldata transferParams) external;
+    function cApplyAndTransfer(ApplyAndTransferParams calldata applyAndTransferParams) external;
+
+    event CInitialized(
+        address indexed account, uint256 pubKey_X, uint256 pubKey_Y, Payload newState, AuditReport[] auditReports
+    );
+    event CDeposited(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
+    event CWithdrawn(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
+    event CApplied(address indexed account, Payload newState, AuditReport[] auditReports);
+    event CTransferred(
+        address indexed sender,
+        address indexed recipient,
+        Payload newState,
+        Payload transferPayload,
+        AuditReport[] auditReports,
+        AuditReport[] transferAuditReports
+    );
 
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);

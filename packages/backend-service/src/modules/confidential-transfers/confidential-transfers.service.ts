@@ -1,4 +1,4 @@
-import { ConfidentialTransfersSDK } from "@noxlabs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 import { Injectable, UnauthorizedException } from "@nestjs/common"
 import { UsersService } from "../users/users.service"
 import { ProofsService } from "../proofs/proofs.service"
@@ -25,78 +25,74 @@ export class ConfidentialTransfersService {
 
   async getInitParams(dto: InitAccountDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
-    return await this.proofsService.generateInitProof(keys.cPrivateKey)
+    return await this.proofsService.generateInitProof(
+      keys.cPrivateKey,
+      dto.auditors
+    )
   }
 
   async getDepositParams(dto: DepositDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
     return await this.proofsService.generateDepositProof(
       keys.cPrivateKey,
       dto.userId,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
   async getTransferParams(dto: TransferDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
     return await this.proofsService.generateTransferProof(
       keys.cPrivateKey,
       dto.userId,
       dto.to,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
   async getWithdrawParams(dto: WithdrawDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
     return await this.proofsService.generateWithdrawProof(
       keys.cPrivateKey,
       dto.userId,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 
   async getApplyParams(dto: ApplyDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
     return await this.proofsService.generateApplyProof(
       keys.cPrivateKey,
       dto.userId,
-      dto.pendingTransfersIndexes
+      dto.pendingTransfersIndexes,
+      dto.auditors
     )
   }
 
   async getApplyAndTransferParams(dto: ApplyAndTransferDto) {
     await this.validateSignature(dto.userId, dto.signature)
-    const keys = await ConfidentialTransfersSDK.deriveConfidentialKeys(
-      BigInt(dto.signature)
-    )
+    const keys = await SDK.deriveConfidentialKeys(BigInt(dto.signature))
 
     return await this.proofsService.generateApplyAndTransferProof(
       keys.cPrivateKey,
       dto.userId,
       dto.pendingTransfersIndexes,
       dto.to,
-      BigInt(dto.amount)
+      BigInt(dto.amount),
+      dto.auditors
     )
   }
 

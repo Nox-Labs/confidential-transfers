@@ -11,7 +11,7 @@ describe("ConfidentialTransfers/hot", function () {
         INITIAL_BALANCE,
         cDeposit,
         sdk,
-        ConfidentialTransfersSDK,
+        SDK,
         cTransfer,
       } = await conn.networkHelpers.loadFixture(baseSetup)
 
@@ -23,10 +23,9 @@ describe("ConfidentialTransfers/hot", function () {
 
       const pendingTransfersIndexes = [0]
 
-      const { cPrivateKey } =
-        await ConfidentialTransfersSDK.deriveConfidentialKeys(
-          BigInt(user2.privateKey)
-        )
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user2.privateKey)
+      )
       const applyInputs = await sdk.getCircuitInputsForApply(
         user2.address,
         cPrivateKey,
@@ -44,15 +43,11 @@ describe("ConfidentialTransfers/hot", function () {
 
       const newCommitment = params.artifacts.outputs[0]
       const newEncryptedAmount = params.artifacts.outputs[1]
-      const newEncryptedAmountForAuditor = params.artifacts.outputs[2]
 
       const accountData = await token.getAccount(user2.address)
       expect(accountData.state.nonce).to.equal(1n)
       expect(accountData.state.commitment).to.equal(newCommitment)
       expect(accountData.state.eAmount).to.equal(newEncryptedAmount)
-      expect(accountData.state.eAmountForAuditor).to.equal(
-        newEncryptedAmountForAuditor
-      )
       expect(accountData.pendingTransfers.length).to.equal(0)
     }).timeout(50000)
   })

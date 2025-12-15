@@ -1,16 +1,8 @@
 import {
-  ApplyAndTransferParamsStruct,
-  ApplyParamsStruct,
-  InitParamsStruct,
-  TransferParamsStruct,
-  UpdateParamsStruct,
-} from "../../artifacts/typechain/src/ConfidentialTransfers.js"
-import {
   CircuitInitInputs,
   CircuitUpdateInputs,
   CircuitTransferInputs,
   CircuitApplyInputs,
-  ProofOutput,
   CircuitApplyAndTransferInputs,
 } from "./types.js"
 import { Token } from "./token.js"
@@ -28,7 +20,6 @@ export class Inputs extends Token {
   ): Promise<CircuitInitInputs> {
     return {
       cPrivateKey,
-      ...(await this.getAuditorPublicKey()),
     }
   }
 
@@ -74,9 +65,7 @@ export class Inputs extends Token {
       senderAccountData.state.eAmount
     )
 
-    const {
-      state: { pubKey_X, pubKey_Y },
-    } = await this.token.getAccount(to)
+    const { pubKey_X, pubKey_Y } = await this.token.getAccount(to)
 
     return {
       cPrivateKey,
@@ -86,7 +75,6 @@ export class Inputs extends Token {
       transferAmount,
       recipientPublicKey_X: pubKey_X,
       recipientPublicKey_Y: pubKey_Y,
-      ...(await this.getAuditorPublicKey()),
     }
   }
 
@@ -114,23 +102,29 @@ export class Inputs extends Token {
       (_, index) => pendingTransfersIndexes.includes(index)
     )
 
-    const decryptedAmountsAndBf = await Promise.all(
-      filteredPendingTransfers.map(async (transfer) => {
+    const { pubKey_Xs, pubKey_Ys } = await this.token.getCPublicKeys(
+      filteredPendingTransfers.map((transfer) => transfer.sender)
+    )
+
+    const decryptedAmountsWithOTKs = await Promise.all(
+      filteredPendingTransfers.map(async (transfer, index) => {
+        const pubKey_X = pubKey_Xs[index]
+        const pubKey_Y = pubKey_Ys[index]
         const sharedKey = await Token.deriveSharedKey(
           cPrivateKey,
-          transfer.pubKey_X,
-          transfer.pubKey_Y
+          pubKey_X,
+          pubKey_Y
         )
 
         const amount = await Token.decryptAmount(
           sharedKey,
-          transfer.nonce,
-          transfer.eAmount
+          transfer.payload.nonce,
+          transfer.payload.eAmount
         )
 
-        const bf = await Token.generateBlindingFactor(sharedKey, transfer.nonce)
+        const otk = await Token.generateOTK(sharedKey, transfer.payload.nonce)
 
-        return { amount, bf }
+        return { amount, otk }
       })
     )
 
@@ -139,16 +133,16 @@ export class Inputs extends Token {
     const pendingTransfersCommitments = Array(MAX).fill(0n)
     for (let i = 0; i < filteredPendingTransfers.length; i++)
       pendingTransfersCommitments[i] = BigInt(
-        filteredPendingTransfers[i].commitment
+        filteredPendingTransfers[i].payload.commitment
       )
 
     const pendingTransfersAmounts = Array(MAX).fill(0n)
-    for (let i = 0; i < decryptedAmountsAndBf.length; i++)
-      pendingTransfersAmounts[i] = decryptedAmountsAndBf[i].amount
+    for (let i = 0; i < decryptedAmountsWithOTKs.length; i++)
+      pendingTransfersAmounts[i] = decryptedAmountsWithOTKs[i].amount
 
-    const pendingTransfersBF = Array(MAX).fill(0n)
-    for (let i = 0; i < decryptedAmountsAndBf.length; i++)
-      pendingTransfersBF[i] = decryptedAmountsAndBf[i].bf
+    const pendingTransfersOTKs = Array(MAX).fill(0n)
+    for (let i = 0; i < decryptedAmountsWithOTKs.length; i++)
+      pendingTransfersOTKs[i] = decryptedAmountsWithOTKs[i].otk
 
     return {
       cPrivateKey,
@@ -158,8 +152,7 @@ export class Inputs extends Token {
       n: BigInt(pendingTransfersIndexes.length),
       pendingTransfersCommitments,
       pendingTransfersAmounts,
-      pendingTransfersBF,
-      ...(await this.getAuditorPublicKey()),
+      pendingTransfersOTKs,
     }
   }
 
@@ -185,68 +178,6 @@ export class Inputs extends Token {
     }
   }
 
-  /* PARAMS */
-
-  getInitParams(output: ProofOutput): InitParamsStruct {
-    return {
-      artifacts: {
-        proof: output.proof,
-        outputs: output.pubSignals.slice(0, 5),
-      },
-    }
-  }
-
-  getWithdrawParams(proofOutput: ProofOutput): UpdateParamsStruct {
-    return this.getUpdateParams(proofOutput)
-  }
-
-  getDepositParams(proofOutput: ProofOutput): UpdateParamsStruct {
-    return this.getUpdateParams(proofOutput)
-  }
-
-  getApplyParams(
-    pendingTransfersIndexes: number[],
-    proofOutput: ProofOutput
-  ): ApplyParamsStruct {
-    return {
-      pendingTransfersIndexes,
-      artifacts: {
-        proof: proofOutput.proof,
-        outputs: proofOutput.pubSignals.slice(0, 3),
-      },
-    }
-  }
-
-  getTransferParams(
-    recipientAddress: string,
-    proofOutput: ProofOutput
-  ): TransferParamsStruct {
-    return {
-      recipient: recipientAddress,
-      artifacts: {
-        proof: proofOutput.proof,
-        outputs: proofOutput.pubSignals.slice(0, 6),
-      },
-    }
-  }
-
-  getApplyAndTransferParams(
-    recipientAddress: string,
-    pendingTransfersIndexes: number[],
-    proofOutput: ProofOutput
-  ): ApplyAndTransferParamsStruct {
-    return {
-      recipient: recipientAddress,
-      pendingTransfersIndexes,
-      artifacts: {
-        proof: proofOutput.proof,
-        outputs: proofOutput.pubSignals.slice(0, 6),
-      },
-    }
-  }
-
-  /* PRIVATE */
-
   private async getCircuitInputsForUpdate(
     account: string,
     cPrivateKey: bigint,
@@ -270,17 +201,6 @@ export class Inputs extends Token {
       oldCommitment: BigInt(accountData.state.commitment),
       operation,
       amount,
-      ...(await this.getAuditorPublicKey()),
-    }
-  }
-
-  private getUpdateParams(output: ProofOutput): UpdateParamsStruct {
-    return {
-      amount: output.pubSignals[6],
-      artifacts: {
-        proof: output.proof,
-        outputs: output.pubSignals.slice(0, 3),
-      },
     }
   }
 }

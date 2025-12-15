@@ -6,15 +6,29 @@ export class Utils {
     return poseidon.F.toObject(poseidon(inputs))
   }
 
-  static async generateCommitment(amount: bigint, bf: bigint): Promise<bigint> {
-    return this.poseidon([amount, bf])
+  static async generateCommitment(
+    amount: bigint,
+    otk: bigint
+  ): Promise<bigint> {
+    return this.poseidon([amount, otk])
   }
 
-  static async generateBlindingFactor(
-    key: bigint,
-    nonce: bigint
-  ): Promise<bigint> {
+  static async generateOTK(key: bigint, nonce: bigint): Promise<bigint> {
     return this.poseidon([key, nonce])
+  }
+
+  static async generateTransferOTK(
+    cPrivateKey: bigint,
+    nonce: bigint,
+    cPublicKey_X: bigint,
+    cPublicKey_Y: bigint
+  ): Promise<bigint> {
+    const sharedKey = await this.deriveSharedKey(
+      cPrivateKey,
+      cPublicKey_X,
+      cPublicKey_Y
+    )
+    return this.generateOTK(sharedKey, nonce)
   }
 
   static async decryptAmount(
@@ -22,16 +36,8 @@ export class Utils {
     nonce: bigint,
     eAmount: bigint
   ): Promise<bigint> {
-    const poseidon = await buildPoseidon()
-    const F = poseidon.F
-
-    const entropy = F.toObject(poseidon([nonce]))
-
-    const keystream1 = poseidon([key, entropy])
-
-    const plaintextAmount = F.sub(F.e(eAmount), keystream1)
-
-    return F.toObject(plaintextAmount)
+    const otk = await this.generateOTK(key, nonce)
+    return await this.decipher(otk, nonce, eAmount)
   }
 
   static async deriveSharedKey(
@@ -57,5 +63,29 @@ export class Utils {
       cPublicKey_X: babyJub.F.toObject(publicKeyPoint[0]) as bigint,
       cPublicKey_Y: babyJub.F.toObject(publicKeyPoint[1]) as bigint,
     }
+  }
+
+  static async cipher(
+    key: bigint,
+    nonce: bigint,
+    plaintext: bigint
+  ): Promise<bigint> {
+    const poseidon = await buildPoseidon()
+    const keystream = poseidon([key, nonce])
+    return poseidon.F.toObject(
+      poseidon.F.add(poseidon.F.e(plaintext), keystream)
+    )
+  }
+
+  static async decipher(
+    key: bigint,
+    nonce: bigint,
+    ciphertext: bigint
+  ): Promise<bigint> {
+    const poseidon = await buildPoseidon()
+    const keystream = poseidon([key, nonce])
+    return poseidon.F.toObject(
+      poseidon.F.sub(poseidon.F.e(ciphertext), keystream)
+    )
   }
 }
