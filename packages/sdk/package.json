@@ -1,13 +1,22 @@
 {
   "name": "@noxlabs/confidential-transfers-sdk",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "SDK for EVM ERC20 Confidential Transfers",
   "author": "Nox Labs",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -16,7 +25,7 @@
   ],
   "scripts": {
     "prepublishOnly": "npm run build",
-    "build": "npm run update && rm -rf dist && tsc -d && cp -R src/artifacts/proofs-helpers dist/artifacts",
+    "build": "rm -rf dist && npm run update && tsup src/index.ts --format cjs,esm --dts && mkdir -p dist/artifacts && cp -R src/artifacts/proofs-helpers dist/artifacts/proofs-helpers && cp -R src/artifacts/abi dist/artifacts/abi",
     "update": "rm -rf src/artifacts/abi && mkdir -p src/artifacts/abi && npm run update:abi:json && npm run update:abi:ts && npm run update:typechain",
     "update:typechain": "rm -rf src/artifacts/typechain && mkdir -p src/artifacts/typechain && mkdir -p src/artifacts/typechain/src && cp ../../out/hardhat/typechain/src/ConfidentialTransfers.ts src/artifacts/typechain/src/ && cp ../../out/hardhat/typechain/common.ts src/artifacts/typechain/ && mkdir -p src/artifacts/typechain/test/utils/mock && cp ../../out/hardhat/typechain/test/utils/mock/MockERC20.ts src/artifacts/typechain/test/utils/mock/",
     "update:abi:json": "node -e 'const fs=require(\"fs\"); const artifact=JSON.parse(fs.readFileSync(\"../../out/foundry/ConfidentialTransfers.sol/ConfidentialTransfers.json\", \"utf8\")); fs.writeFileSync(\"src/artifacts/abi/ConfidentialTransfers.json\", JSON.stringify(artifact.abi, null, 2));'",
@@ -31,6 +40,7 @@
     "@types/circomlibjs": "^0.1.6",
     "@types/node": "^24.10.1",
     "@types/snarkjs": "^0.7.9",
+    "tsup": "^8.5.1",
     "typescript": "~5.9.3"
   }
 }
