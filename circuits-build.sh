@@ -14,8 +14,8 @@ CAPITALIZED_NAME="$(tr '[:lower:]' '[:upper:]' <<< ${CIRCUIT_NAME:0:1})${CIRCUIT
 VERIFIER_NAME="${CAPITALIZED_NAME}PlonkVerifier"
 
 # Define directories
-HELPERS_DIR="packages/sdk/artifacts/proofs-helpers"
-KEYS_DIR="packages/sdk/keys"
+HELPERS_DIR="packages/sdk/src/artifacts/proofs-helpers"
+KEYS_DIR="out/zk/keys"
 VERIFIER_DIR="src/verifiers"
 CIRCUIT_FILE="circuits/${CIRCUIT_NAME}.circom"
 

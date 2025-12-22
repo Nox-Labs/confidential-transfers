@@ -1,4 +1,4 @@
-import { ConfidentialTransfers } from "../../artifacts/typechain/src/ConfidentialTransfers.js"
+import { ConfidentialTransfers } from "../artifacts/typechain/src/ConfidentialTransfers.js"
 import { Proofs } from "./proofs.js"
 import { SDKOptions } from "./types.js"
 

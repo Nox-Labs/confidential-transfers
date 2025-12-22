@@ -1,4 +1,4 @@
-import { AuditReportStruct } from "../../artifacts/typechain/src/ConfidentialTransfers.js"
+import { AuditReportStruct } from "../artifacts/typechain/src/ConfidentialTransfers.js"
 import { Payload } from "../index.js"
 import { Inputs } from "./inputs.js"
 

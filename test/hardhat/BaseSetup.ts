@@ -76,8 +76,8 @@ export async function baseSetupUninitializedUsers() {
 
   const sdk = new SDK(await token.getAddress(), ethers.provider as any, {
     paths: {
-      helpers: fs.realpathSync("packages/sdk/artifacts/proofs-helpers"),
-      keys: fs.realpathSync("packages/sdk/keys"),
+      helpers: fs.realpathSync("packages/sdk/src/artifacts/proofs-helpers"),
+      keys: fs.realpathSync("out/zk/keys"),
     },
   })
 

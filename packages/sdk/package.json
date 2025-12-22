@@ -4,19 +4,23 @@
   "description": "SDK for EVM ERC20 Confidential Transfers",
   "author": "Nox Labs",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
     "prepublishOnly": "npm run build",
-    "build": "npm run update && tsc -d && mkdir -p dist/artifacts && cp -r artifacts/proofs-helpers dist/artifacts/",
-    "update": "npm run update:abi:json && npm run update:abi:ts && npm run update:typechain",
-    "update:abi:json": "rm -rf artifacts/abi && mkdir -p artifacts/abi && node -e 'const fs=require(\"fs\"); const artifact=JSON.parse(fs.readFileSync(\"../../out/foundry/ConfidentialTransfers.sol/ConfidentialTransfers.json\", \"utf8\")); fs.writeFileSync(\"artifacts/abi/ConfidentialTransfers.json\", JSON.stringify(artifact.abi, null, 2));'",
-    "update:abi:ts": "node -e 'const fs=require(\"fs\"); const abi=JSON.parse(fs.readFileSync(\"artifacts/abi/ConfidentialTransfers.json\", \"utf8\")); const content=`export const confidentialTransfersAbi = ${JSON.stringify(abi, null, 2)} as const\\n\\nexport type ConfidentialTransfersAbi = typeof confidentialTransfersAbi\\n`; fs.writeFileSync(\"artifacts/abi/ConfidentialTransfers.ts\", content);'",
-    "update:typechain": "rm -rf artifacts/typechain && mkdir -p artifacts/typechain && mkdir -p artifacts/typechain/src && cp ../../out/hardhat/typechain/src/ConfidentialTransfers.ts artifacts/typechain/src/ && cp ../../out/hardhat/typechain/common.ts artifacts/typechain/ && mkdir -p artifacts/typechain/test/utils/mock && cp ../../out/hardhat/typechain/test/utils/mock/MockERC20.ts artifacts/typechain/test/utils/mock/"
+    "build": "npm run update && rm -rf dist && tsc -d && cp -R src/artifacts/proofs-helpers dist/artifacts",
+    "update": "rm -rf src/artifacts/abi && mkdir -p src/artifacts/abi && npm run update:abi:json && npm run update:abi:ts && npm run update:typechain",
+    "update:typechain": "rm -rf src/artifacts/typechain && mkdir -p src/artifacts/typechain && mkdir -p src/artifacts/typechain/src && cp ../../out/hardhat/typechain/src/ConfidentialTransfers.ts src/artifacts/typechain/src/ && cp ../../out/hardhat/typechain/common.ts src/artifacts/typechain/ && mkdir -p src/artifacts/typechain/test/utils/mock && cp ../../out/hardhat/typechain/test/utils/mock/MockERC20.ts src/artifacts/typechain/test/utils/mock/",
+    "update:abi:json": "node -e 'const fs=require(\"fs\"); const artifact=JSON.parse(fs.readFileSync(\"../../out/foundry/ConfidentialTransfers.sol/ConfidentialTransfers.json\", \"utf8\")); fs.writeFileSync(\"src/artifacts/abi/ConfidentialTransfers.json\", JSON.stringify(artifact.abi, null, 2));'",
+    "update:abi:ts": "node -e 'const fs=require(\"fs\"); const abi=JSON.parse(fs.readFileSync(\"src/artifacts/abi/ConfidentialTransfers.json\", \"utf8\")); const content=`export const confidentialTransfersAbi = ${JSON.stringify(abi, null, 2)} as const\\n\\nexport type ConfidentialTransfersAbi = typeof confidentialTransfersAbi\\n`; fs.writeFileSync(\"src/artifacts/abi/ConfidentialTransfers.ts\", content);'"
   },
   "dependencies": {
     "circomlibjs": "^0.1.7",

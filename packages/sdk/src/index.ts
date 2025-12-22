@@ -1,11 +1,12 @@
 import { ethers } from "ethers"
 
 import { SDKOptions } from "./modules/types.js"
-import { confidentialTransfersAbi } from "../artifacts/abi/ConfidentialTransfers.js"
+import { confidentialTransfersAbi } from "./artifacts/abi/ConfidentialTransfers.js"
 import { Utils } from "./modules/utils.js"
 import { Params } from "./modules/params.js"
 
-import type { MockERC20 as ERC20 } from "../artifacts/typechain/test/utils/mock/MockERC20.js"
+import type { MockERC20 as ERC20 } from "./artifacts/typechain/test/utils/mock/MockERC20.js"
+import type { ProofOutput } from "./modules/types.js"
 import type {
   ConfidentialTransfers,
   AccountStruct as Account,
@@ -14,7 +15,7 @@ import type {
   ApplyParamsStruct as cApplyParams,
   UpdateParamsStruct as cUpdateParams,
   TransferParamsStruct as cTransferParams,
-} from "../artifacts/typechain/src/ConfidentialTransfers.js"
+} from "./artifacts/typechain/src/ConfidentialTransfers.js"
 
 export {
   confidentialTransfersAbi,
@@ -26,6 +27,7 @@ export {
   cApplyParams,
   cUpdateParams,
   cTransferParams,
+  ProofOutput,
   Utils,
 }
 

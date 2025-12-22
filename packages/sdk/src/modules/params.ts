@@ -5,7 +5,7 @@ import {
   InitParamsStruct,
   TransferParamsStruct,
   UpdateParamsStruct,
-} from "../../artifacts/typechain/src/ConfidentialTransfers.js"
+} from "../artifacts/typechain/src/ConfidentialTransfers.js"
 import { ProofOutput } from "./types.js"
 import { Auditors } from "./auditors.js"
 
