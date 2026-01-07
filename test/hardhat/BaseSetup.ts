@@ -12,6 +12,10 @@ import type { ProofOutput } from "../../packages/sdk/src/modules/types.js"
 import * as fs from "fs"
 import * as path from "path"
 import { BaseWallet } from "ethers"
+import type {
+  MockERC20,
+  MockERC20Bridgeable,
+} from "../../out/hardhat/typechain/index.js"
 
 export const conn = await hre.network.connect()
 
@@ -21,7 +25,7 @@ const pk = {
   user2: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
 }
 
-export async function baseSetupUninitializedUsers() {
+async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   const { ethers, networkHelpers } = conn
   const INITIAL_BALANCE = ethers.parseEther("1000")
 
@@ -38,14 +42,14 @@ export async function baseSetupUninitializedUsers() {
   const uv = await ethers.deployContract(getVerifierPath("Update"))
   const tv = await ethers.deployContract(getVerifierPath("Transfer"))
   const anv = await ethers.deployContract(getVerifierPath("ApplyAndTransfer"))
-  const token = await ethers.deployContract("MockERC20", [
+  const token = (await ethers.deployContract(target, [
     4,
     await iv.getAddress(),
     await av.getAddress(),
     await uv.getAddress(),
     await tv.getAddress(),
     await anv.getAddress(),
-  ])
+  ])) as unknown as MockERC20Bridgeable
 
   const userUninitialized = Object.assign(
     new ethers.Wallet(pk.user0, ethers.provider),
@@ -334,9 +338,7 @@ export async function baseSetupUninitializedUsers() {
   }
 }
 
-export async function baseSetup() {
-  const s = await baseSetupUninitializedUsers()
-
+async function initialize(s: Awaited<ReturnType<typeof setup>>) {
   try {
     await s.cInit("cold", s.user1)
   } catch (error) {
@@ -350,4 +352,20 @@ export async function baseSetup() {
   }
 
   return s
+}
+
+export async function baseSetupUninitializedUsers() {
+  return setup("MockERC20")
+}
+
+export async function baseSetupUninitializedUsersBridgeable() {
+  return setup("MockERC20Bridgeable")
+}
+
+export async function baseSetup() {
+  return initialize(await baseSetupUninitializedUsers())
+}
+
+export async function baseSetupBridgeable() {
+  return initialize(await baseSetupUninitializedUsersBridgeable())
 }

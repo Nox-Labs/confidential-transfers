@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {IConfidentialTransfers, PendingTransfer, AuditReport} from "../interface/IConfidentialTransfers.sol";
+import {
+    AuditReport,
+    IConfidentialTransfers,
+    PendingTransfer
+} from "../interface/IConfidentialTransfers.sol";
 
 library ArrayLib {
     error DuplicateIndex();
+    error NotFound();
 
     function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] memory output) {
         if (input.length != 24) revert IConfidentialTransfers.InvalidArrayLength(24, input.length);
@@ -13,7 +18,9 @@ library ArrayLib {
         }
     }
 
-    function removeByIndices(PendingTransfer[] storage self, uint256[] memory indicesToRemove) internal {
+    function removeByIndices(PendingTransfer[] storage self, uint256[] memory indicesToRemove)
+        internal
+    {
         assertUnique(indicesToRemove, self.length);
 
         uint256 len = self.length;
@@ -44,7 +51,22 @@ library ArrayLib {
         }
     }
 
-    function assertUnique(uint256[] memory indices, uint256 lengthOfPendingTransfers) internal pure {
+    function remove(address[] storage self, address item) internal {
+        uint256 len = self.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (self[i] == item) {
+                self[i] = self[len - 1];
+                self.pop();
+                break;
+            }
+        }
+        if (self.length == len) revert NotFound();
+    }
+
+    function assertUnique(uint256[] memory indices, uint256 lengthOfPendingTransfers)
+        internal
+        pure
+    {
         bool[] memory seen = new bool[](lengthOfPendingTransfers);
         for (uint256 i = 0; i < indices.length; i++) {
             uint256 index = indices[i];
@@ -52,34 +74,26 @@ library ArrayLib {
             seen[index] = true;
         }
     }
+
+    function assertContains(address[] storage self, AuditReport[] memory auditReports)
+        internal
+        view
+    {
+        if (self.length == 0) return;
+        if (self.length > auditReports.length) revert NotFound();
+
+        bool[] memory found = new bool[](self.length);
+        for (uint256 i = 0; i < self.length; i++) {
+            for (uint256 j = 0; j < auditReports.length; j++) {
+                if (self[i] == auditReports[j].auditor) {
+                    found[i] = true;
+                    break;
+                }
+            }
+        }
+        for (uint256 i = 0; i < auditReports.length; i++) {
+            if (!found[i]) revert NotFound();
+        }
+    }
 }
 
-// function copy(AuditReport[] storage self, AuditReport[] calldata data) internal {
-//     assembly {
-//         let oldLen := sload(self.slot)
-//         let newLen := data.length
-
-//         sstore(self.slot, newLen)
-
-//         mstore(0, self.slot)
-//         let startSlot := keccak256(0, 0x20)
-
-//         for { let i := 0 } lt(i, newLen) { i := add(i, 1) } {
-//             let offset := add(data.offset, mul(i, 0x40))
-//             let val1 := calldataload(offset)
-//             let val2 := calldataload(add(offset, 0x20))
-
-//             let itemSlot := add(startSlot, mul(i, 2))
-//             sstore(itemSlot, val1)
-//             sstore(add(itemSlot, 1), val2)
-//         }
-
-//         if gt(oldLen, newLen) {
-//             for { let i := newLen } lt(i, oldLen) { i := add(i, 1) } {
-//                 let itemSlot := add(startSlot, mul(i, 2))
-//                 sstore(itemSlot, 0)
-//                 sstore(add(itemSlot, 1), 0)
-//             }
-//         }
-//     }
-// }

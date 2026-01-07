@@ -6,11 +6,13 @@ import {console} from "forge-std/console.sol";
 
 import {MockERC20} from "../test/utils/mock/MockERC20.sol";
 
-import {PlonkVerifier as UpdatePlonkVerifier} from "../src/verifiers/UpdatePlonkVerifier.sol";
-import {PlonkVerifier as TransferPlonkVerifier} from "../src/verifiers/TransferPlonkVerifier.sol";
-import {PlonkVerifier as InitPlonkVerifier} from "../src/verifiers/InitPlonkVerifier.sol";
+import {
+    PlonkVerifier as ApplyAndTransferPlonkVerifier
+} from "../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "../src/verifiers/ApplyPlonkVerifier.sol";
-import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
+import {PlonkVerifier as InitPlonkVerifier} from "../src/verifiers/InitPlonkVerifier.sol";
+import {PlonkVerifier as TransferPlonkVerifier} from "../src/verifiers/TransferPlonkVerifier.sol";
+import {PlonkVerifier as UpdatePlonkVerifier} from "../src/verifiers/UpdatePlonkVerifier.sol";
 
 contract DeployMock is Script {
     function run() public {
@@ -20,8 +22,14 @@ contract DeployMock is Script {
         UpdatePlonkVerifier updateVerifier = new UpdatePlonkVerifier();
         TransferPlonkVerifier transferVerifier = new TransferPlonkVerifier();
         ApplyAndTransferPlonkVerifier applyAndTransferVerifier = new ApplyAndTransferPlonkVerifier();
-        MockERC20 mockERC20 =
-            new MockERC20(20, initVerifier, applyVerifier, updateVerifier, transferVerifier, applyAndTransferVerifier);
+        MockERC20 mockERC20 = new MockERC20(
+            20,
+            initVerifier,
+            applyVerifier,
+            updateVerifier,
+            transferVerifier,
+            applyAndTransferVerifier
+        );
         mockERC20.mint(msg.sender, 1e22);
         console.log("MockERC20 deployed to:", address(mockERC20));
         console.log("Sender aka Owner:", msg.sender);

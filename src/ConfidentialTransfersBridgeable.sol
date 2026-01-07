@@ -4,11 +4,9 @@ pragma solidity ^0.8.28;
 import {ConfidentialTransfers} from "./ConfidentialTransfers.sol";
 import {
     Payload,
+    PendingTransfer,
     TransferParams,
-    InitParams,
-    ApplyParams,
-    UpdateParams,
-    PendingTransfer
+    UpdateParams
 } from "./interface/IConfidentialTransfers.sol";
 
 abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
@@ -20,7 +18,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
     }
 
     function cWithdraw(UpdateParams calldata updateParams) public virtual override {
-        _cMint(address(this), updateParams.amount);
+        _cMint(updateParams.amount);
         super.cWithdraw(updateParams);
     }
 
@@ -28,6 +26,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
 
     /**
      * @dev This function update receiver's pending transfers
+     * @dev Should be called by bridge receiver function.
      */
     function _cReceive(address recipient, PendingTransfer memory pendingTransfer) internal {
         _getConfidentialTransferStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
@@ -35,18 +34,24 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
 
     /**
      * @dev This function update sender's state and return the pending transfer to be bridged.
+     * @dev Should be called by bridge sender function.
      */
-    function _cSend(TransferParams calldata transferParams) internal returns (PendingTransfer memory pendingTransfer) {
+    function _cSend(TransferParams calldata transferParams)
+        internal
+        returns (PendingTransfer memory pendingTransfer)
+    {
         (Payload memory newState, Payload memory pendingTransferPayload) = _transfer(transferParams);
 
         _getConfidentialTransferStorage().accounts[msg.sender].state = newState;
 
-        pendingTransfer = PendingTransfer(msg.sender, pendingTransferPayload, transferParams.transferAuditReports);
+        pendingTransfer = PendingTransfer(
+            msg.sender, pendingTransferPayload, transferParams.transferAuditReports
+        );
     }
 
     /* VIRTUAL INTERNAL */
 
     function _cBurn(uint256 amount) internal virtual;
 
-    function _cMint(address account, uint256 amount) internal virtual;
+    function _cMint(uint256 amount) internal virtual;
 }
