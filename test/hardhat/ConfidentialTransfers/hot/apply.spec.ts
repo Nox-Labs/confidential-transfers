@@ -2,8 +2,8 @@ import { baseSetup, conn } from "../../BaseSetup.js"
 import { expect } from "chai"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:hot", function () {
-    describe("ConfidentialTransfers:hot:cApply()", function () {
+  describe("Hot:ConfidentialTransfers", function () {
+    describe("Hot:ConfidentialTransfers:cApply()", function () {
       it("Should apply the pending transfers", async function () {
         const {
           token,

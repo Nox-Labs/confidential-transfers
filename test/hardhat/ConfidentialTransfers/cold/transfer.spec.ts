@@ -3,7 +3,7 @@ import { expect } from "chai"
 
 describe("ConfidentialTransfers", function () {
   describe("ConfidentialTransfers/cold", function () {
-    describe("ConfidentialTransfers:cold:cTransfer()", function () {
+    describe("Cold:ConfidentialTransfers:cTransfer()", function () {
       let f: Awaited<ReturnType<typeof baseSetup>>
 
       beforeEach(async function () {

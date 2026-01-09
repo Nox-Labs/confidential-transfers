@@ -3,8 +3,8 @@ import { expect } from "chai"
 import { conn, baseSetup } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:cold", function () {
-    describe("ConfidentialTransfers:cold:cDeposit()", function () {
+  describe("Cold:ConfidentialTransfers", function () {
+    describe("Cold:ConfidentialTransfers:cDeposit()", function () {
       let f: Awaited<ReturnType<typeof baseSetup>>
       beforeEach(async function () {
         f = await conn.networkHelpers.loadFixture(baseSetup)

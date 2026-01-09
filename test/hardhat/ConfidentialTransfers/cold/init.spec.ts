@@ -3,8 +3,8 @@ import { baseSetupUninitializedUsers, conn } from "../../BaseSetup.js"
 import { getProofFilenameForColdTest } from "../../../utils/script/getProofFilenameForColdTest.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:cold", function () {
-    describe("ConfidentialTransfers:cold:cInit()", function () {
+  describe("Cold:ConfidentialTransfers", function () {
+    describe("Cold:ConfidentialTransfers:cInit()", function () {
       let f: Awaited<ReturnType<typeof baseSetupUninitializedUsers>>
       beforeEach(async function () {
         f = await conn.networkHelpers.loadFixture(baseSetupUninitializedUsers)

@@ -3,8 +3,8 @@ import { conn } from "../../BaseSetup.js"
 import { baseSetup } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:hot", function () {
-    describe("ConfidentialTransfers:hot:cDeposit()", function () {
+  describe("Hot:ConfidentialTransfers", function () {
+    describe("Hot:ConfidentialTransfers:cDeposit()", function () {
       it("Should deposit the funds to the zk layer", async function () {
         const { token, user1, INITIAL_BALANCE, sdk, SDK } =
           await conn.networkHelpers.loadFixture(baseSetup)

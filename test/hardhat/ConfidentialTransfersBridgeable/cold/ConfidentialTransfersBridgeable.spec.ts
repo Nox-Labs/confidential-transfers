@@ -2,7 +2,7 @@ import { expect } from "chai"
 import { conn, baseSetupBridgeable } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfersBridgeable", function () {
-  describe("ConfidentialTransfersBridgeable:cold", function () {
+  describe("Cold:ConfidentialTransfersBridgeable", function () {
     let f: Awaited<ReturnType<typeof baseSetupBridgeable>>
     describe("", function () {
       beforeEach(async function () {

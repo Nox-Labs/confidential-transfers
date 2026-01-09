@@ -3,8 +3,8 @@ import { expect } from "chai"
 import { conn, baseSetupBridgeable } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfersBridgeable", function () {
-  describe("ConfidentialTransfersBridgeable:cold", function () {
-    describe("ConfidentialTransfersBridgeable:cold:cDeposit()", function () {
+  describe("Cold:ConfidentialTransfersBridgeable", function () {
+    describe("Cold:ConfidentialTransfersBridgeable:cDeposit()", function () {
       let f: Awaited<ReturnType<typeof baseSetupBridgeable>>
       beforeEach(async function () {
         f = await conn.networkHelpers.loadFixture(baseSetupBridgeable)

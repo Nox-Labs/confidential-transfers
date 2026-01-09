@@ -6,7 +6,7 @@ import {
 } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:cold", function () {
+  describe("Cold:ConfidentialTransfers", function () {
     let f: Awaited<ReturnType<typeof baseSetupUninitializedUsers>>
     describe("", function () {
       beforeEach(async function () {

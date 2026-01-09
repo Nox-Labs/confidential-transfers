@@ -2,8 +2,8 @@ import { expect } from "chai"
 import { baseSetupUninitializedUsers, conn } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:cold", function () {
-    describe("ConfidentialTransfers:cold:addRequiredAuditor()", function () {
+  describe("Cold:ConfidentialTransfers", function () {
+    describe("Cold:ConfidentialTransfers:addRequiredAuditor()", function () {
       let f: Awaited<ReturnType<typeof baseSetupUninitializedUsers>>
       beforeEach(async function () {
         f = await conn.networkHelpers.loadFixture(baseSetupUninitializedUsers)

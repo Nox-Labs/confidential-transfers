@@ -2,8 +2,8 @@ import { baseSetup, conn } from "../../BaseSetup.js"
 import { expect } from "chai"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:cold", function () {
-    describe("ConfidentialTransfers:cold:cApplyAndTransfer()", function () {
+  describe("Cold:ConfidentialTransfers", function () {
+    describe("Cold:ConfidentialTransfers:cApplyAndTransfer()", function () {
       let f: Awaited<ReturnType<typeof baseSetup>>
 
       beforeEach(async function () {

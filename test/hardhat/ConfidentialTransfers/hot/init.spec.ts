@@ -2,8 +2,8 @@ import { expect } from "chai"
 import { baseSetup, conn } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers:hot", function () {
-    describe("ConfidentialTransfers:hot:cInit()", function () {
+  describe("Hot:ConfidentialTransfers", function () {
+    describe("Hot:ConfidentialTransfers:cInit()", function () {
       it("Should initialize the user account", async function () {
         const { token, userUninitialized, sdk, cInit, SDK } =
           await conn.networkHelpers.loadFixture(baseSetup)
