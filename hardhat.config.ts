@@ -8,7 +8,7 @@ export default defineConfig({
     settings: {
       optimizer: {
         enabled: true,
-        runs: 10000,
+        runs: 100,
       },
       viaIR: true,
     },

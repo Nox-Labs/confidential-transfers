@@ -23,9 +23,17 @@
     "deploy:mock:anvil": "forge script DeployMock --rpc-url anvil --broadcast --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --unlocked"
   },
   "devDependencies": {
+    "@layerzerolabs/test-devtools-evm-foundry": "^8.0.1",
+    "@layerzerolabs/lz-v2-utilities": "^3.0.152",
+    "@layerzerolabs/lz-evm-messagelib-v2": "^3.0.152",
+    "@layerzerolabs/lz-evm-oapp-v2": "^3.0.152",
+    "@layerzerolabs/lz-evm-protocol-v2": "^3.0.152",
+    "@layerzerolabs/oapp-evm": "^0.4.1",
+    "@layerzerolabs/oft-evm": "^4.0.1",
+    "@layerzerolabs/lz-evm-v1-0.7": "^3.0.152",
+    "@openzeppelin/contracts": "^5.4.0",
     "@nomicfoundation/hardhat-ignition": "^3.0.5",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.1",
-    "@openzeppelin/contracts": "^5.4.0",
     "@types/chai": "^5.2.3",
     "@types/chai-as-promised": "^8.0.2",
     "@types/circomlibjs": "^0.1.6",
@@ -35,12 +43,13 @@
     "chai": "^5.3.3",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
-    "ethers": "^6.15.0",
+    "ethers": "^6.16.0",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
     "hardhat": "^3.0.14",
     "husky": "^9.1.7",
     "mocha": "^11.7.5",
     "snarkjs": "^0.7.5",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "solidity-bytes-utils": "^0.8.4"
   }
 }
