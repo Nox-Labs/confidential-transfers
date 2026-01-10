@@ -196,7 +196,7 @@ contract ConfidentialOFTTest is TestHelperOz5 {
             TransferParams(artifacts, userA, new AuditReport[](0), new AuditReport[](0));
 
         // Set up parameters for the send operation
-        CSendParams memory cSendParams = CSendParams(bEid, transferParams, options, "");
+        CSendParams memory cSendParams = CSendParams(bEid, transferParams, options);
 
         MessagingFee memory fee = aOFT.quoteCSend(cSendParams);
 
@@ -284,67 +284,6 @@ contract ConfidentialOFTTest is TestHelperOz5 {
         assertEq(composer.message(), composerMsg_);
         assertEq(composer.executor(), address(this));
         assertEq(composer.extraData(), ""); // default to setting the extraData to the
-        // message as well to test
-    }
-
-    function test_cSend_ShouldSendConfidentialTokensWithComposedMessage() public {
-        // Create an instance of the OFTComposerMock contract
-        MockOFTComposer composer = new MockOFTComposer();
-
-        bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200_000, 0)
-            .addExecutorLzComposeOption(0, 500_000, 0);
-        bytes memory composeMsg = hex"1234";
-
-        ZKArtifacts memory artifacts = ZKArtifacts(new uint256[](24), new uint256[](4));
-
-        artifacts.outputs[0] = uint256(keccak256(abi.encode("commitment")));
-        artifacts.outputs[1] = uint256(keccak256(abi.encode("eAmount")));
-        artifacts.outputs[2] = uint256(keccak256(abi.encode("transferCommitment")));
-        artifacts.outputs[3] = uint256(keccak256(abi.encode("transferEAmount")));
-
-        TransferParams memory transferParams = TransferParams(
-            artifacts, address(composer), new AuditReport[](0), new AuditReport[](0)
-        );
-
-        // Set up parameters for the send operation
-        CSendParams memory cSendParams = CSendParams(bEid, transferParams, options, composeMsg);
-
-        MessagingFee memory fee = aOFT.quoteCSend(cSendParams);
-
-        vm.prank(userA);
-        MessagingReceipt memory msgReceipt =
-            aOFT.cSend{value: fee.nativeFee}(cSendParams, fee, payable(address(this)));
-
-        // Verify that the packets were correctly sent to the destination chain.
-        // @param _dstEid The endpoint ID of the destination chain.
-        // @param _dstAddress The OApp address on the destination chain.
-        verifyPackets(bEid, addressToBytes32(address(bOFT)));
-
-        // Set up parameters for the composed message
-        uint32 dstEid_ = bEid;
-        address from_ = address(bOFT);
-        bytes memory options_ = options;
-        bytes32 guid_ = msgReceipt.guid;
-        address to_ = address(composer);
-        bytes memory composerData = OFTComposeMsgCodec.encode(
-            msgReceipt.nonce, aEid, 0, abi.encodePacked(addressToBytes32(userA), composeMsg)
-        );
-
-        // Execute the composed message
-        this.lzCompose(dstEid_, from_, options_, guid_, to_, composerData);
-
-        PendingTransfer[] memory pendingTransfers = bOFT.getAccount(userA).pendingTransfers;
-        assertEq(pendingTransfers.length, 1);
-        assertEq(pendingTransfers[0].sender, userA);
-        assertEq(pendingTransfers[0].payload.commitment, artifacts.outputs[2]);
-        assertEq(pendingTransfers[0].payload.eAmount, artifacts.outputs[3]);
-
-        // Verify the state of the composer contract
-        assertEq(composer.from(), from_);
-        assertEq(composer.guid(), guid_);
-        assertEq(composer.message(), composerData);
-        assertEq(composer.executor(), address(this));
-        // assertEq(composer.extraData(), composerMsg_); // default to setting the extraData to the
         // message as well to test
     }
 }

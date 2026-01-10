@@ -27,10 +27,6 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MessagingReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
-import {
-    OFTComposeMsgCodec
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
-import "forge-std/console.sol";
 
 contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialOFT {
     constructor(
@@ -137,15 +133,12 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         CSendParams calldata cSendParams,
         PendingTransfer memory pendingTransfer
     ) internal view returns (bytes memory message, bytes memory options) {
-        (bytes memory msgPayload, bool hasCompose) = ConfidentialOFTMsgCodec.encode(
-            cSendParams.transferParams.recipient, pendingTransfer, cSendParams.composeMsg
-        );
+        bytes memory msgPayload =
+            ConfidentialOFTMsgCodec.encode(cSendParams.transferParams.recipient, pendingTransfer);
 
         message = abi.encode(uint8(1), msgPayload);
 
-        options = combineOptions(
-            cSendParams.dstEid, hasCompose ? SEND_AND_CALL : SEND, cSendParams.extraOptions
-        );
+        options = combineOptions(cSendParams.dstEid, SEND, cSendParams.extraOptions);
 
         if (msgInspector != address(0)) {
             IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
@@ -170,23 +163,6 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
             PendingTransfer memory pendingTransfer =
                 ConfidentialOFTMsgCodec.pendingTransfer(message[96:96 + len]);
             _cReceive(toAddress, pendingTransfer);
-
-            console.log("is composed", ConfidentialOFTMsgCodec.isComposed(message[96:96 + len]));
-
-            if (ConfidentialOFTMsgCodec.isComposed(message[96:96 + len])) {
-                bytes memory composeData = OFTComposeMsgCodec.encode(
-                    origin.nonce,
-                    origin.srcEid,
-                    0,
-                    abi.encodePacked(
-                        bytes32(uint256(uint160(pendingTransfer.sender))),
-                        ConfidentialOFTMsgCodec.composeMsg(message[96:96 + len])
-                    )
-                );
-                console.log("composeData");
-                console.logBytes(composeData);
-                endpoint.sendCompose(toAddress, guid, 0, composeData);
-            }
 
             emit ConfidentialOFTReceived(guid, origin.srcEid, toAddress, pendingTransfer);
         } else {

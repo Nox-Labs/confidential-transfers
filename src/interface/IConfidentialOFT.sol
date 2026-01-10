@@ -9,7 +9,6 @@ struct CSendParams {
     uint32 dstEid;
     TransferParams transferParams;
     bytes extraOptions;
-    bytes composeMsg;
 }
 
 interface IConfidentialOFT {
