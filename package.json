@@ -12,7 +12,7 @@
     "build:circuits": "bash ./circuits-build.sh",
     "build:circuits:all": "pnpm run build:circuits -- init && pnpm run build:circuits -- apply && pnpm run build:circuits -- update && pnpm run build:circuits -- transfer && pnpm run build:circuits -- applyAndTransfer && forge fmt",
     "build:sdk": "cd packages/sdk && pnpm run build",
-    "coverage": "npx hardhat test mocha --grep ':cold' --coverage",
+    "coverage": "npx hardhat test mocha --grep 'Cold:' --coverage",
     "test": "pnpm run test:hh:cold && pnpm run test:foundry",
     "test:foundry": "forge test",
     "test:hh": "npx hardhat test mocha",

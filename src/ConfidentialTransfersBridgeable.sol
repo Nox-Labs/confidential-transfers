@@ -38,9 +38,11 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
      */
     function _cSend(TransferParams calldata transferParams)
         internal
-        returns (PendingTransfer memory pendingTransfer)
+        returns (Payload memory newState, PendingTransfer memory pendingTransfer)
     {
-        (Payload memory newState, Payload memory pendingTransferPayload) = _transfer(transferParams);
+        Payload memory pendingTransferPayload;
+
+        (newState, pendingTransferPayload) = _transfer(transferParams);
 
         _getConfidentialTransferStorage().accounts[msg.sender].state = newState;
 

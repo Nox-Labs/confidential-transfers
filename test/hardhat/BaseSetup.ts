@@ -12,10 +12,7 @@ import type { ProofOutput } from "../../packages/sdk/src/modules/types.js"
 import * as fs from "fs"
 import * as path from "path"
 import { BaseWallet } from "ethers"
-import type {
-  MockERC20,
-  MockERC20Bridgeable,
-} from "../../out/hardhat/typechain/index.js"
+import type { MockERC20Bridgeable } from "../../out/hardhat/typechain/index.js"
 
 export const conn = await hre.network.connect()
 

@@ -6,6 +6,8 @@ import {ConfidentialTransfersBridgeable} from "./ConfidentialTransfersBridgeable
 import {CSendParams, IConfidentialOFT} from "./interface/IConfidentialOFT.sol";
 import {Payload, PendingTransfer} from "./interface/IConfidentialTransfers.sol";
 
+import {ConfidentialOFTMsgCodec} from "./lib/ConfidentialOFTMsgCodec.sol";
+
 import {
     PlonkVerifier as ApplyAndTransferPlonkVerifier
 } from "./verifiers/ApplyAndTransferPlonkVerifier.sol";
@@ -23,6 +25,11 @@ import {OFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import {SendParam} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+import {MessagingReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {
+    OFTComposeMsgCodec
+} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 import "forge-std/console.sol";
 
 contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialOFT {
@@ -74,11 +81,9 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         PendingTransfer memory pendingTransfer = PendingTransfer(
             msg.sender, pendingTransferPackage, cSendParams.transferParams.transferAuditReports
         );
-        bytes memory msgPayload = abi.encode(cSendParams.transferParams.recipient, pendingTransfer);
 
-        bytes memory message = abi.encode(uint8(1), msgPayload);
-
-        bytes memory options = combineOptions(cSendParams.dstEid, SEND, cSendParams.extraOptions);
+        (bytes memory message, bytes memory options) =
+            _buildMsgAndOptions(cSendParams, pendingTransfer);
 
         msgFee = _quote(cSendParams.dstEid, message, options, false);
     }
@@ -87,16 +92,25 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         CSendParams calldata cSendParams,
         MessagingFee calldata fee,
         address refundAddress
-    ) public payable {
-        PendingTransfer memory pendingTransfer = _cSend(cSendParams.transferParams);
+    ) public payable returns (MessagingReceipt memory msgReceipt) {
+        (Payload memory newState, PendingTransfer memory pendingTransfer) =
+            _cSend(cSendParams.transferParams);
 
-        bytes memory msgPayload = abi.encode(cSendParams.transferParams.recipient, pendingTransfer);
+        (bytes memory message, bytes memory options) =
+            _buildMsgAndOptions(cSendParams, pendingTransfer);
 
-        bytes memory message = abi.encode(uint8(1), msgPayload);
+        msgReceipt = _lzSend(cSendParams.dstEid, message, options, fee, refundAddress);
 
-        bytes memory options = combineOptions(cSendParams.dstEid, SEND, cSendParams.extraOptions);
-
-        _lzSend(cSendParams.dstEid, message, options, fee, refundAddress);
+        emit ConfidentialOFTSent(
+            msgReceipt.guid,
+            cSendParams.dstEid,
+            pendingTransfer.sender,
+            cSendParams.transferParams.recipient,
+            newState,
+            pendingTransfer.payload,
+            cSendParams.transferParams.stateAuditReports,
+            cSendParams.transferParams.transferAuditReports
+        );
     }
 
     function _buildMsgAndOptions(SendParam calldata _sendParam, uint256 _amountLD)
@@ -105,15 +119,36 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         override
         returns (bytes memory message, bytes memory options)
     {
-        (bytes memory messagePayload, bool hasCompose) =
+        (bytes memory msgPayload, bool hasCompose) =
             OFTMsgCodec.encode(_sendParam.to, _toSD(_amountLD), _sendParam.composeMsg);
-        message = abi.encode(uint8(0), messagePayload);
 
-        uint16 msgType = hasCompose ? SEND_AND_CALL : SEND;
-        options = combineOptions(_sendParam.dstEid, msgType, _sendParam.extraOptions);
+        message = abi.encode(uint8(0), msgPayload);
+
+        options = combineOptions(
+            _sendParam.dstEid, hasCompose ? SEND_AND_CALL : SEND, _sendParam.extraOptions
+        );
 
         if (msgInspector != address(0)) {
-            IOAppMsgInspector(msgInspector).inspect(messagePayload, options);
+            IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
+        }
+    }
+
+    function _buildMsgAndOptions(
+        CSendParams calldata cSendParams,
+        PendingTransfer memory pendingTransfer
+    ) internal view returns (bytes memory message, bytes memory options) {
+        (bytes memory msgPayload, bool hasCompose) = ConfidentialOFTMsgCodec.encode(
+            cSendParams.transferParams.recipient, pendingTransfer, cSendParams.composeMsg
+        );
+
+        message = abi.encode(uint8(1), msgPayload);
+
+        options = combineOptions(
+            cSendParams.dstEid, hasCompose ? SEND_AND_CALL : SEND, cSendParams.extraOptions
+        );
+
+        if (msgInspector != address(0)) {
+            IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
         }
     }
 
@@ -125,19 +160,38 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         bytes calldata extraData
     ) internal virtual override {
         (uint8 msgType, bytes memory msgPayload) = abi.decode(message, (uint8, bytes));
+        uint256 len = msgPayload.length;
         if (msgType == 0) {
             // we use _message slice because _lzReceive expect that _message should be in calldata
             // but msgPayload is in memory
-            for (uint256 i = 0; i < 40; i++) {
-                if (msgPayload[i] != message[96 + i]) revert("Invalid message payload");
-            }
-            super._lzReceive(origin, guid, message[96:136], executor, extraData);
+            super._lzReceive(origin, guid, message[96:96 + len], executor, extraData);
         } else if (msgType == 1) {
-            (address recipient, PendingTransfer memory pendingTransfer) =
-                abi.decode(msgPayload, (address, PendingTransfer));
-            _cReceive(recipient, pendingTransfer);
+            address toAddress = ConfidentialOFTMsgCodec.sendTo(message[96:96 + len]);
+            PendingTransfer memory pendingTransfer =
+                ConfidentialOFTMsgCodec.pendingTransfer(message[96:96 + len]);
+            _cReceive(toAddress, pendingTransfer);
+
+            console.log("is composed", ConfidentialOFTMsgCodec.isComposed(message[96:96 + len]));
+
+            if (ConfidentialOFTMsgCodec.isComposed(message[96:96 + len])) {
+                bytes memory composeData = OFTComposeMsgCodec.encode(
+                    origin.nonce,
+                    origin.srcEid,
+                    0,
+                    abi.encodePacked(
+                        bytes32(uint256(uint160(pendingTransfer.sender))),
+                        ConfidentialOFTMsgCodec.composeMsg(message[96:96 + len])
+                    )
+                );
+                console.log("composeData");
+                console.logBytes(composeData);
+                endpoint.sendCompose(toAddress, guid, 0, composeData);
+            }
+
+            emit ConfidentialOFTReceived(guid, origin.srcEid, toAddress, pendingTransfer);
         } else {
             revert InvalidMessageType();
         }
     }
 }
+
