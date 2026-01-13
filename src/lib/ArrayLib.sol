@@ -18,7 +18,7 @@ library ArrayLib {
         }
     }
 
-    function removeByIndices(PendingTransfer[] storage self, uint256[] memory indicesToRemove)
+    function removeByIndices(PendingTransfer[] storage self, uint256[] calldata indicesToRemove)
         internal
     {
         assertUnique(indicesToRemove, self.length);
@@ -63,7 +63,7 @@ library ArrayLib {
         if (self.length == len) revert NotFound();
     }
 
-    function assertUnique(uint256[] memory indices, uint256 lengthOfPendingTransfers)
+    function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers)
         internal
         pure
     {
@@ -75,7 +75,7 @@ library ArrayLib {
         }
     }
 
-    function assertContains(address[] storage self, AuditReport[] memory auditReports)
+    function assertContains(address[] storage self, AuditReport[] calldata auditReports)
         internal
         view
     {

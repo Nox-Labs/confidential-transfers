@@ -63,49 +63,50 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         _transfer(from, to, amount);
     }
 
-    function quoteCSend(CSendParams calldata cSendParams)
+    function quoteCSend(CSendParams calldata params)
         public
         view
         returns (MessagingFee memory msgFee)
     {
         Payload memory pendingTransferPackage = Payload({
             nonce: _getConfidentialTransferStorage().accounts[msg.sender].state.nonce + 1,
-            commitment: cSendParams.transferParams.artifacts.outputs[2],
-            eAmount: cSendParams.transferParams.artifacts.outputs[3]
+            commitment: params.transferParams.artifacts.outputs[2],
+            eAmount: params.transferParams.artifacts.outputs[3]
         });
 
         PendingTransfer memory pendingTransfer = PendingTransfer(
-            msg.sender, pendingTransferPackage, cSendParams.transferParams.transferAuditReports
+            msg.sender, pendingTransferPackage, params.transferParams.transferAuditReports
         );
 
-        (bytes memory message, bytes memory options) =
-            _buildMsgAndOptions(cSendParams, pendingTransfer);
+        (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
 
-        msgFee = _quote(cSendParams.dstEid, message, options, false);
+        msgFee = _quote(params.dstEid, message, options, false);
     }
 
-    function cSend(
-        CSendParams calldata cSendParams,
-        MessagingFee calldata fee,
-        address refundAddress
-    ) public payable returns (MessagingReceipt memory msgReceipt) {
+    function cSend(CSendParams calldata params, MessagingFee calldata fee, address refundAddress)
+        public
+        payable
+        onlyInitialized(msg.sender)
+        checkRequiredAuditor(msg.sender, params.transferParams.stateAuditReports)
+        checkRequiredAuditor(msg.sender, params.transferParams.transferAuditReports)
+        returns (MessagingReceipt memory msgReceipt)
+    {
         (Payload memory newState, PendingTransfer memory pendingTransfer) =
-            _cSend(cSendParams.transferParams);
+            _cSend(params.transferParams);
 
-        (bytes memory message, bytes memory options) =
-            _buildMsgAndOptions(cSendParams, pendingTransfer);
+        (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
 
-        msgReceipt = _lzSend(cSendParams.dstEid, message, options, fee, refundAddress);
+        msgReceipt = _lzSend(params.dstEid, message, options, fee, refundAddress);
 
         emit ConfidentialOFTSent(
             msgReceipt.guid,
-            cSendParams.dstEid,
+            params.dstEid,
             pendingTransfer.sender,
-            cSendParams.transferParams.recipient,
+            params.transferParams.recipient,
             newState,
             pendingTransfer.payload,
-            cSendParams.transferParams.stateAuditReports,
-            cSendParams.transferParams.transferAuditReports
+            params.transferParams.stateAuditReports,
+            params.transferParams.transferAuditReports
         );
     }
 
@@ -130,15 +131,15 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
     }
 
     function _buildMsgAndOptions(
-        CSendParams calldata cSendParams,
+        CSendParams calldata params,
         PendingTransfer memory pendingTransfer
     ) internal view returns (bytes memory message, bytes memory options) {
         bytes memory msgPayload =
-            ConfidentialOFTMsgCodec.encode(cSendParams.transferParams.recipient, pendingTransfer);
+            ConfidentialOFTMsgCodec.encode(params.transferParams.recipient, pendingTransfer);
 
         message = abi.encode(uint8(1), msgPayload);
 
-        options = combineOptions(cSendParams.dstEid, SEND, cSendParams.extraOptions);
+        options = combineOptions(params.dstEid, SEND, params.extraOptions);
 
         if (msgInspector != address(0)) {
             IOAppMsgInspector(msgInspector).inspect(msgPayload, options);

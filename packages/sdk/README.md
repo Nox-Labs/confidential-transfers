@@ -7,17 +7,26 @@ The Confidential Transfers SDK is a TypeScript library that provides a set of fu
 1. Install the package:
 
 ```bash
-npm install @nox-labs/confidential-transfers-sdk
+npm install @noxlabs/confidential-transfers-sdk
 ```
 
 2. Install the zk keys or generate them
+
+```bash
+KEYS_SOURCE_URL="https://tan-hollow-gerbil-264.mypinata.cloud/ipfs/bafybeib7myufblrjs6tsmv3pb5guunwk4byg43qoxj6d5bjtipx2aptlke"
+curl -L "${KEYS_SOURCE_URL}/init/init_final.zkey" -o keys/init/init_final.zkey
+curl -L "${KEYS_SOURCE_URL}/apply/apply_final.zkey" -o keys/apply/apply_final.zkey
+curl -L "${KEYS_SOURCE_URL}/update/update_final.zkey" -o keys/update/update_final.zkey
+curl -L "${KEYS_SOURCE_URL}/transfer/transfer_final.zkey" -o keys/transfer/transfer_final.zkey
+curl -L "${KEYS_SOURCE_URL}/applyAndTransfer/applyAndTransfer_final.zkey" -o keys/applyAndTransfer/applyAndTransfer_final.zkey
+```
 
 ## How to use
 
 1. Import the package:
 
 ```typescript
-import { SDK } from "@nox-labs/confidential-transfers-sdk"
+import { SDK } from "@noxlabs/confidential-transfers-sdk"
 ```
 
 2. Initialize the SDK:
@@ -25,7 +34,7 @@ import { SDK } from "@nox-labs/confidential-transfers-sdk"
 ```typescript
 const sdk = new SDK(contractAddress, provider, {
   paths: {
-    helpers: "@nox-labs/confidential-transfers-sdk/artifacts/proofs-helpers",
+    helpers: "@noxlabs/confidential-transfers-sdk/artifacts/proofs-helpers",
     keys: "<path to downloaded zk keys>",
   },
 })

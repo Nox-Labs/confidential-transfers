@@ -1,5 +1,6 @@
+import * as fs from "fs"
+import * as path from "path"
 import hre from "hardhat"
-import { SDK } from "../../packages/sdk/src/index.js"
 import {
   getProofFilenameForColdTest,
   PROOFS_DIR,
@@ -8,10 +9,8 @@ import {
   TRANSFER_AMOUNT,
   type Operation,
 } from "../utils/script/getProofFilenameForColdTest.js"
-import type { ProofOutput } from "../../packages/sdk/src/modules/types.js"
-import * as fs from "fs"
-import * as path from "path"
 import { BaseWallet } from "ethers"
+import { SDK, type ProofOutput } from "@noxlabs/confidential-transfers-sdk"
 import type { MockERC20Bridgeable } from "../../out/hardhat/typechain/index.js"
 
 export const conn = await hre.network.connect()

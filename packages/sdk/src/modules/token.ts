@@ -1,9 +1,13 @@
 import { ConfidentialTransfers } from "../artifacts/typechain/src/ConfidentialTransfers.js"
+import { ConfidentialOFT } from "../artifacts/typechain/src/ConfidentialOFT.js"
 import { Proofs } from "./proofs.js"
 import { SDKOptions } from "./types.js"
 
 export class Token extends Proofs {
-  constructor(readonly token: ConfidentialTransfers, options: SDKOptions) {
+  constructor(
+    readonly token: ConfidentialTransfers | ConfidentialOFT,
+    options: SDKOptions
+  ) {
     super(options)
   }
 

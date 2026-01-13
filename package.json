@@ -20,7 +20,7 @@
     "test:hh:cold": "npx hardhat test mocha --grep 'Cold:ConfidentialTransfers'",
     "test:hh:cold:prepare": "npx hardhat run test/utils/script/generateProofsForColdTest.ts",
     "download:powersOfTau": "curl -o powersOfTau28_hez_final_16.ptau https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_16.ptau",
-    "deploy:mock:anvil": "forge script DeployMock --rpc-url anvil --broadcast --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --unlocked"
+    "deploy:mock:anvil": "forge script DeployMock -s 'run(string)' mainnet-sepolia --broadcast --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --unlocked"
   },
   "devDependencies": {
     "@layerzerolabs/test-devtools-evm-foundry": "^8.0.1",
@@ -34,6 +34,7 @@
     "@openzeppelin/contracts": "^5.4.0",
     "@nomicfoundation/hardhat-ignition": "^3.0.5",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.1",
+    "@noxlabs/confidential-transfers-sdk": "file:packages/sdk",
     "@types/chai": "^5.2.3",
     "@types/chai-as-promised": "^8.0.2",
     "@types/circomlibjs": "^0.1.6",

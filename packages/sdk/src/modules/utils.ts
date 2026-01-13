@@ -1,4 +1,9 @@
 import { buildBabyjub, buildPoseidon } from "circomlibjs"
+import { ethers } from "ethers"
+import { ConfidentialTransfers } from "../artifacts/typechain/src/ConfidentialTransfers"
+import { confidentialTransfersAbi } from "../artifacts/abi/ConfidentialTransfers"
+import { ConfidentialOFT } from "../artifacts/typechain/src/ConfidentialOFT"
+import { confidentialOFTAbi } from "../artifacts/abi/ConfidentialOFT"
 
 export class Utils {
   static async poseidon(inputs: bigint[]): Promise<bigint> {
@@ -87,5 +92,27 @@ export class Utils {
     return poseidon.F.toObject(
       poseidon.F.sub(poseidon.F.e(ciphertext), keystream)
     )
+  }
+
+  static getConfidentialTransfersInstance(
+    tokenAddress: string,
+    runner: ethers.ContractRunner
+  ): ConfidentialTransfers {
+    return new ethers.Contract(
+      tokenAddress,
+      confidentialTransfersAbi,
+      runner
+    ) as unknown as ConfidentialTransfers
+  }
+
+  static getConfidentialOFTInstance(
+    tokenAddress: string,
+    runner: ethers.ContractRunner
+  ): ConfidentialOFT {
+    return new ethers.Contract(
+      tokenAddress,
+      confidentialOFTAbi,
+      runner
+    ) as unknown as ConfidentialOFT
   }
 }

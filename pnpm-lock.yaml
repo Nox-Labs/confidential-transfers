@@ -38,6 +38,9 @@ importers:
       '@nomicfoundation/hardhat-toolbox-mocha-ethers':
         specifier: ^3.0.1
         version: 3.0.2(f0da95470008fe6a41764ebeb7477194)
+      '@noxlabs/confidential-transfers-sdk':
+        specifier: file:packages/sdk
+        version: file:packages/sdk
       '@openzeppelin/contracts':
         specifier: ^5.4.0
         version: 5.4.0
@@ -638,6 +641,9 @@ packages:
   '@nomicfoundation/solidity-analyzer@0.1.2':
     resolution: {integrity: sha512-q4n32/FNKIhQ3zQGGw5CvPF6GTvDCpYwIf7bEY/dZTZbgfDsHyjJwURxUJf3VQuuJj+fDIFl4+KkBVbw4Ef6jA==}
     engines: {node: '>= 12'}
+
+  '@noxlabs/confidential-transfers-sdk@file:packages/sdk':
+    resolution: {directory: packages/sdk, type: directory}
 
   '@openzeppelin/contracts-upgradeable@4.7.3':
     resolution: {integrity: sha512-+wuegAMaLcZnLCJIvrVUDzA9z/Wp93f0Dla/4jJvIhijRrPabjQbZe6fWiECLaJyfn5ci9fqf9vTw3xpQOad2A==}
@@ -2605,6 +2611,16 @@ snapshots:
       '@nomicfoundation/solidity-analyzer-linux-x64-gnu': 0.1.2
       '@nomicfoundation/solidity-analyzer-linux-x64-musl': 0.1.2
       '@nomicfoundation/solidity-analyzer-win32-x64-msvc': 0.1.2
+
+  '@noxlabs/confidential-transfers-sdk@file:packages/sdk':
+    dependencies:
+      circomlibjs: 0.1.7
+      ethers: 6.16.0
+      snarkjs: 0.7.5
+    transitivePeerDependencies:
+      - bufferutil
+      - react-native-b4a
+      - utf-8-validate
 
   '@openzeppelin/contracts-upgradeable@4.7.3': {}
 

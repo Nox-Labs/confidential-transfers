@@ -1,7 +1,9 @@
 import { ethers } from "ethers"
 
-import { SDKOptions } from "./modules/types.js"
+import type { SDKOptions } from "./modules/types.js"
+import * as SDKTypes from "./modules/types.js"
 import { confidentialTransfersAbi } from "./artifacts/abi/ConfidentialTransfers.js"
+import { confidentialOFTAbi } from "./artifacts/abi/ConfidentialOFT.js"
 import { Utils } from "./modules/utils.js"
 import { Params } from "./modules/params.js"
 
@@ -15,20 +17,34 @@ import type {
   ApplyParamsStruct as cApplyParams,
   UpdateParamsStruct as cUpdateParams,
   TransferParamsStruct as cTransferParams,
+  ApplyAndTransferParamsStruct as cApplyAndTransferParams,
 } from "./artifacts/typechain/src/ConfidentialTransfers.js"
+import * as ConfidentialTransfersTypechain from "./artifacts/typechain/src/ConfidentialTransfers.js"
+import type {
+  ConfidentialOFT,
+  CSendParamsStruct as CSendParams,
+} from "./artifacts/typechain/src/ConfidentialOFT.js"
+import * as ConfidentialOFTTypechain from "./artifacts/typechain/src/ConfidentialOFT.js"
 
 export {
   confidentialTransfersAbi,
+  confidentialOFTAbi,
   ConfidentialTransfers,
+  ConfidentialOFT,
   ERC20,
   Account,
   Payload,
   cInitParams,
+  CSendParams,
   cApplyParams,
   cUpdateParams,
   cTransferParams,
+  cApplyAndTransferParams,
   ProofOutput,
   Utils,
+  ConfidentialTransfersTypechain,
+  ConfidentialOFTTypechain,
+  SDKTypes,
 }
 
 export class SDK extends Params {
@@ -40,17 +56,10 @@ export class SDK extends Params {
     const runner =
       typeof rpcUrl === "string" ? new ethers.JsonRpcProvider(rpcUrl) : rpcUrl
 
-    super(SDK.getContractInstance(tokenAddress, runner), options)
-  }
+    const func = options.isOFT
+      ? SDK.getConfidentialOFTInstance
+      : SDK.getConfidentialTransfersInstance
 
-  static getContractInstance(
-    tokenAddress: string,
-    runner: ethers.ContractRunner
-  ): ConfidentialTransfers {
-    return new ethers.Contract(
-      tokenAddress,
-      confidentialTransfersAbi,
-      runner
-    ) as unknown as ConfidentialTransfers
+    super(func(tokenAddress, runner), options)
   }
 }

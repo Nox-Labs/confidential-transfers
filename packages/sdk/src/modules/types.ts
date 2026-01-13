@@ -39,6 +39,7 @@ export type CircuitInputs =
   | CircuitApplyAndTransferInputs
 
 export type SDKOptions = {
+  isOFT?: boolean
   paths: {
     helpers: string
     keys: string

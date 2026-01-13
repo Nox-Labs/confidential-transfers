@@ -1,0 +1,8 @@
+{
+    "mainnet-sepolia": {
+        "mockConfidentialOFT": "0x05BA6Bf77027f5967CaF794314FB034b17C23224"
+    },
+    "arbitrum-sepolia": {
+        "mockConfidentialOFT": "0xBc4b43f30db4e714Ab8e082B11753E08cf406c25"
+    }
+}

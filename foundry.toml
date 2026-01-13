@@ -21,7 +21,10 @@ fs_permissions = [
 
 [rpc_endpoints]
 anvil = "http://127.0.0.1:8545"
-sepolia = "https://0xrpc.io/sep"
+arbitrum-sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+# arbitrum-sepolia = "http://127.0.0.1:8545"
+mainnet-sepolia = "https://0xrpc.io/sep"
+# mainnet-sepolia = "http://127.0.0.1:8545"
 
 [fmt]
 line_length = 100

@@ -29,6 +29,16 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
      * @dev Should be called by bridge receiver function.
      */
     function _cReceive(address recipient, PendingTransfer memory pendingTransfer) internal {
+        // TODO: Validate recipient's public key
+        // TODO: Validate audit reports
+        // We can implement one of these approaches to be able to validate:
+        // 1. Implement a new function that will work like setPeer
+        // where each account should wire src and dst chains by calling it and insure that his
+        // account public keys matches the public keys of the other chain
+        // 2. Transfer public keys from src chain and (a) if account doesn't initialized yet,
+        // make soft initialization only with public keys, (b) but if account already initialized,
+        // and public keys mismatch, send this pending transfer back to src chain and add it to
+        // recipient's pending transfers queue
         _getConfidentialTransferStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
     }
 

@@ -82,106 +82,131 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
     /* EXTERNAL */
 
-    function cInit(InitParams calldata initParams) public virtual {
+    function cInit(InitParams calldata params)
+        public
+        virtual
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+    {
         Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
-        account.state = _init(initParams);
-        account.pubKey_X = initParams.artifacts.outputs[0];
-        account.pubKey_Y = initParams.artifacts.outputs[1];
-        account.auditReports = initParams.stateAuditReports;
+        account.state = _init(params);
+        account.pubKey_X = params.artifacts.outputs[0];
+        account.pubKey_Y = params.artifacts.outputs[1];
+        account.auditReports = params.stateAuditReports;
 
         emit CInitialized(
             msg.sender, account.pubKey_X, account.pubKey_Y, account.state, account.auditReports
         );
     }
 
-    function cTransfer(TransferParams calldata transferParams) public virtual {
+    function cDeposit(UpdateParams calldata params)
+        public
+        virtual
+        onlyInitialized(msg.sender)
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+    {
+        _cTransfer(msg.sender, address(this), params.amount);
+        Payload memory newState = _update(0, params);
+        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        account.state = newState;
+        account.auditReports = params.stateAuditReports;
+
+        emit CDeposited(msg.sender, params.amount, newState, account.auditReports);
+    }
+
+    function cWithdraw(UpdateParams calldata params)
+        public
+        virtual
+        onlyInitialized(msg.sender)
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+    {
+        Payload memory newState = _update(1, params);
+        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        account.state = newState;
+        account.auditReports = params.stateAuditReports;
+        _cTransfer(address(this), msg.sender, params.amount);
+
+        emit CWithdrawn(msg.sender, params.amount, newState, account.auditReports);
+    }
+
+    function cApply(ApplyParams calldata params)
+        public
+        virtual
+        onlyInitialized(msg.sender)
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+    {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        (Payload memory newState, Payload memory transferPackage) = _transfer(transferParams);
+        Payload memory newState = _apply(params);
 
         Account storage account = $.accounts[msg.sender];
         account.state = newState;
-        account.auditReports = transferParams.stateAuditReports;
+        account.auditReports = params.stateAuditReports;
+        account.pendingTransfers.removeByIndices(params.pendingTransfersIndexes);
 
-        Account storage recipientAccount = $.accounts[transferParams.recipient];
+        emit CApplied(msg.sender, newState, account.auditReports);
+    }
+
+    function cTransfer(TransferParams calldata params)
+        public
+        virtual
+        onlyInitialized(msg.sender)
+        onlyInitialized(params.recipient)
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+        checkRequiredAuditor(msg.sender, params.transferAuditReports)
+        checkRequiredAuditor(params.recipient, params.transferAuditReports)
+    {
+        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        (Payload memory newState, Payload memory transferPackage) = _transfer(params);
+
+        Account storage account = $.accounts[msg.sender];
+        account.state = newState;
+        account.auditReports = params.stateAuditReports;
+
+        Account storage recipientAccount = $.accounts[params.recipient];
         recipientAccount.pendingTransfers
-            .push(PendingTransfer(msg.sender, transferPackage, transferParams.transferAuditReports));
+            .push(PendingTransfer(msg.sender, transferPackage, params.transferAuditReports));
 
         emit CTransferred(
             msg.sender,
-            transferParams.recipient,
+            params.recipient,
             newState,
             transferPackage,
             account.auditReports,
-            transferParams.transferAuditReports
+            params.transferAuditReports
         );
     }
 
-    function cApply(ApplyParams calldata applyParams) public virtual {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        Payload memory newState = _apply(applyParams);
-
-        Account storage account = $.accounts[msg.sender];
-        account.state = newState;
-        account.auditReports = applyParams.stateAuditReports;
-        account.pendingTransfers.removeByIndices(applyParams.pendingTransfersIndexes);
-
-        emit CApplied(msg.sender, newState, account.auditReports);
-    }
-
-    function cDeposit(UpdateParams calldata updateParams) public virtual {
-        _cTransfer(msg.sender, address(this), updateParams.amount);
-        Payload memory newState = _update(0, updateParams);
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
-        account.state = newState;
-        account.auditReports = updateParams.stateAuditReports;
-
-        emit CDeposited(msg.sender, updateParams.amount, newState, account.auditReports);
-    }
-
-    function cWithdraw(UpdateParams calldata updateParams) public virtual {
-        Payload memory newState = _update(1, updateParams);
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
-        account.state = newState;
-        account.auditReports = updateParams.stateAuditReports;
-        _cTransfer(address(this), msg.sender, updateParams.amount);
-
-        emit CWithdrawn(msg.sender, updateParams.amount, newState, account.auditReports);
-    }
-
-    function cApplyAndTransfer(ApplyAndTransferParams calldata applyAndTransferParams)
+    function cApplyAndTransfer(ApplyAndTransferParams calldata params)
         public
         virtual
+        onlyInitialized(msg.sender)
+        onlyInitialized(params.recipient)
+        checkRequiredAuditor(msg.sender, params.stateAuditReports)
+        checkRequiredAuditor(msg.sender, params.transferAuditReports)
+        checkRequiredAuditor(params.recipient, params.transferAuditReports)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        (Payload memory newState, Payload memory pendingTransferPayload) =
-            _applyAndTransfer(applyAndTransferParams);
+        (Payload memory newState, Payload memory pendingTransferPayload) = _applyAndTransfer(params);
         Account storage account = $.accounts[msg.sender];
         account.state = newState;
-        account.auditReports = applyAndTransferParams.stateAuditReports;
-        account.pendingTransfers.removeByIndices(applyAndTransferParams.pendingTransfersIndexes);
+        account.auditReports = params.stateAuditReports;
+        account.pendingTransfers.removeByIndices(params.pendingTransfersIndexes);
 
-        Account storage recipientAccount = $.accounts[applyAndTransferParams.recipient];
+        Account storage recipientAccount = $.accounts[params.recipient];
         recipientAccount.pendingTransfers
-            .push(
-                PendingTransfer(
-                    msg.sender, pendingTransferPayload, applyAndTransferParams.transferAuditReports
-                )
-            );
+            .push(PendingTransfer(msg.sender, pendingTransferPayload, params.transferAuditReports));
         emit CApplied(msg.sender, newState, account.auditReports);
         emit CTransferred(
             msg.sender,
-            applyAndTransferParams.recipient,
+            params.recipient,
             newState,
             pendingTransferPayload,
-            applyAndTransferParams.stateAuditReports,
-            applyAndTransferParams.transferAuditReports
+            params.stateAuditReports,
+            params.transferAuditReports
         );
     }
 
     function addRequiredAuditor(address auditor) public virtual {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        if ($.accounts[auditor].state.commitment == 0) revert AccountNotInitialized();
-        $.accounts[msg.sender].requiredAuditors.push(auditor);
+        _getConfidentialTransferStorage().accounts[msg.sender].requiredAuditors.push(auditor);
         emit RequiredAuditorAdded(msg.sender, auditor);
     }
 
@@ -192,11 +217,10 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
     /* INTERNAL */
 
-    function _init(InitParams calldata initParams)
+    function _init(InitParams calldata params)
         internal
         view
-        checkArrayLength(4, initParams.artifacts.outputs.length)
-        checkRequiredAuditor(msg.sender, initParams.stateAuditReports)
+        checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
@@ -204,12 +228,12 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
         if (account.state.commitment != 0) revert AccountAlreadyInitialized();
 
-        uint256[24] memory proof = initParams.artifacts.proof.toFixed24();
+        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[4] memory pubSignals = [
-            initParams.artifacts.outputs[0],
-            initParams.artifacts.outputs[1],
-            initParams.artifacts.outputs[2],
-            initParams.artifacts.outputs[3]
+            params.artifacts.outputs[0],
+            params.artifacts.outputs[1],
+            params.artifacts.outputs[2],
+            params.artifacts.outputs[3]
         ];
 
         if (!$.initVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
@@ -217,23 +241,21 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         newState = Payload({nonce: 0, commitment: pubSignals[2], eAmount: pubSignals[3]});
     }
 
-    function _update(uint8 operation, UpdateParams calldata updateParams)
+    function _update(uint8 operation, UpdateParams calldata params)
         internal
         view
-        onlyInitialized
-        checkArrayLength(2, updateParams.artifacts.outputs.length)
-        checkRequiredAuditor(msg.sender, updateParams.stateAuditReports)
+        checkArrayLength(2, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
         Account storage account = $.accounts[msg.sender];
 
-        uint256[24] memory proof = updateParams.artifacts.proof.toFixed24();
+        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [
-            updateParams.artifacts.outputs[0],
-            updateParams.artifacts.outputs[1],
+            params.artifacts.outputs[0],
+            params.artifacts.outputs[1],
             operation,
-            updateParams.amount,
+            params.amount,
             account.state.nonce,
             account.state.commitment
         ];
@@ -245,30 +267,26 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         });
     }
 
-    function _transfer(TransferParams calldata transferParams)
+    function _transfer(TransferParams calldata params)
         internal
         view
-        onlyInitialized
-        checkArrayLength(4, transferParams.artifacts.outputs.length)
-        checkRequiredAuditor(msg.sender, transferParams.stateAuditReports)
-        checkRequiredAuditor(msg.sender, transferParams.transferAuditReports)
-        checkRequiredAuditor(transferParams.recipient, transferParams.transferAuditReports)
+        checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState, Payload memory pendingTransferPackage)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
         Account storage account = $.accounts[msg.sender];
-        Account storage recipientAccount = $.accounts[transferParams.recipient];
+        Account storage recipientAccount = $.accounts[params.recipient];
 
         if (recipientAccount.pendingTransfers.length >= $.maxPendingTransfers) {
             revert MaxPendingTransfersReached();
         }
 
-        uint256[24] memory proof = transferParams.artifacts.proof.toFixed24();
+        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[8] memory pubSignals = [
-            transferParams.artifacts.outputs[0],
-            transferParams.artifacts.outputs[1],
-            transferParams.artifacts.outputs[2],
-            transferParams.artifacts.outputs[3],
+            params.artifacts.outputs[0],
+            params.artifacts.outputs[1],
+            params.artifacts.outputs[2],
+            params.artifacts.outputs[3],
             account.state.nonce,
             account.state.commitment,
             recipientAccount.pubKey_X,
@@ -286,39 +304,37 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         });
     }
 
-    function _apply(ApplyParams calldata applyParams)
+    function _apply(ApplyParams calldata params)
         internal
         view
-        onlyInitialized
-        checkArrayLength(2, applyParams.artifacts.outputs.length)
-        checkRequiredAuditor(msg.sender, applyParams.stateAuditReports)
+        checkArrayLength(2, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
 
         Account storage account = $.accounts[msg.sender];
 
-        uint256 n = applyParams.pendingTransfersIndexes.length;
+        uint256 n = params.pendingTransfersIndexes.length;
 
         if (n > account.pendingTransfers.length || n == 0) revert InvalidPendingTransfersIndexes();
 
         uint256[5 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = applyParams.artifacts.outputs[0];
-        pubSignals[1] = applyParams.artifacts.outputs[1];
+        pubSignals[0] = params.artifacts.outputs[0];
+        pubSignals[1] = params.artifacts.outputs[1];
         pubSignals[2] = n;
         pubSignals[3] = account.state.nonce;
         pubSignals[4] = account.state.commitment;
 
         for (uint256 i = 0; i < MAX_PENDING_TRANSFERS_APPLY; i++) {
             if (i < n) {
-                uint256 targetIndex = applyParams.pendingTransfersIndexes[i];
+                uint256 targetIndex = params.pendingTransfersIndexes[i];
                 pubSignals[5 + i] =
                     uint256(account.pendingTransfers[targetIndex].payload.commitment);
             } else {
                 pubSignals[5 + i] = 0;
             }
         }
-        uint256[24] memory proof = applyParams.artifacts.proof.toFixed24();
+        uint256[24] memory proof = params.artifacts.proof.toFixed24();
 
         if (!$.applyVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
 
@@ -327,36 +343,30 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         });
     }
 
-    function _applyAndTransfer(ApplyAndTransferParams calldata applyAndTransferParams)
+    function _applyAndTransfer(ApplyAndTransferParams calldata params)
         internal
         view
-        onlyInitialized
-        checkArrayLength(4, applyAndTransferParams.artifacts.outputs.length)
-        checkRequiredAuditor(msg.sender, applyAndTransferParams.stateAuditReports)
-        checkRequiredAuditor(msg.sender, applyAndTransferParams.transferAuditReports)
-        checkRequiredAuditor(
-            applyAndTransferParams.recipient, applyAndTransferParams.transferAuditReports
-        )
+        checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState, Payload memory pendingTransfer)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
         Account storage account = $.accounts[msg.sender];
-        Account storage recipientAccount = $.accounts[applyAndTransferParams.recipient];
+        Account storage recipientAccount = $.accounts[params.recipient];
 
         if (recipientAccount.pendingTransfers.length >= $.maxPendingTransfers) {
             revert MaxPendingTransfersReached();
         }
 
-        uint256 n = applyAndTransferParams.pendingTransfersIndexes.length;
+        uint256 n = params.pendingTransfersIndexes.length;
 
         if (n > account.pendingTransfers.length || n == 0) revert InvalidPendingTransfersIndexes();
 
-        uint256[24] memory proof = applyAndTransferParams.artifacts.proof.toFixed24();
+        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[9 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = applyAndTransferParams.artifacts.outputs[0];
-        pubSignals[1] = applyAndTransferParams.artifacts.outputs[1];
-        pubSignals[2] = applyAndTransferParams.artifacts.outputs[2];
-        pubSignals[3] = applyAndTransferParams.artifacts.outputs[3];
+        pubSignals[0] = params.artifacts.outputs[0];
+        pubSignals[1] = params.artifacts.outputs[1];
+        pubSignals[2] = params.artifacts.outputs[2];
+        pubSignals[3] = params.artifacts.outputs[3];
         pubSignals[4] = account.state.nonce;
         pubSignals[5] = account.state.commitment;
         pubSignals[6] = recipientAccount.pubKey_X;
@@ -365,7 +375,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
         for (uint256 i = 0; i < MAX_PENDING_TRANSFERS_APPLY; i++) {
             if (i < n) {
-                uint256 targetIndex = applyAndTransferParams.pendingTransfersIndexes[i];
+                uint256 targetIndex = params.pendingTransfersIndexes[i];
                 pubSignals[9 + i] =
                     uint256(account.pendingTransfers[targetIndex].payload.commitment);
             } else {
@@ -422,8 +432,8 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         _;
     }
 
-    modifier onlyInitialized() {
-        if (_getConfidentialTransferStorage().accounts[msg.sender].state.commitment == 0) {
+    modifier onlyInitialized(address account) {
+        if (_getConfidentialTransferStorage().accounts[account].state.commitment == 0) {
             revert AccountNotInitialized();
         }
         _;
