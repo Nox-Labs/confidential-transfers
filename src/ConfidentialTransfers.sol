@@ -205,7 +205,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         );
     }
 
-    function addRequiredAuditor(address auditor) public virtual {
+    function addRequiredAuditor(address auditor) public virtual onlyInitialized(auditor) {
         _getConfidentialTransferStorage().accounts[msg.sender].requiredAuditors.push(auditor);
         emit RequiredAuditorAdded(msg.sender, auditor);
     }
