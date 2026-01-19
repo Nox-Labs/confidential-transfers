@@ -23,7 +23,8 @@ import {
 } from "./interface/IConfidentialTransfers.sol";
 
 import {ArrayLib} from "./lib/ArrayLib.sol";
-import {Initializable} from "./lib/Initializable.sol";
+
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable {
     using ArrayLib for uint256[];
@@ -32,8 +33,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     using ArrayLib for AuditReport[];
 
     /**
-     * @dev Maximum number of pending transfers that can be applied at once, configured by circom
-     * circuit
+     * @dev Maximum number that can be applied at once, configured by circom circuit
      */
     uint8 constant MAX_PENDING_TRANSFERS_APPLY = 10;
 

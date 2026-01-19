@@ -39,6 +39,8 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
         // make soft initialization only with public keys, (b) but if account already initialized,
         // and public keys mismatch, send this pending transfer back to src chain and add it to
         // recipient's pending transfers queue
+        // 3. Update init circuit and allow only one confidential keys derivation path, after that
+        // it would be impossible to initialize accounts with different confidential keys.
         _getConfidentialTransferStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
     }
 
