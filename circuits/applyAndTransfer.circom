@@ -17,10 +17,12 @@ template ApplyAndTransfer(max) {
   signal input pendingTransfersOTKs[max];
 
   // --- Public Inputs ---
+  signal input chainId;
+  signal input contractAddress;
   signal input oldNonce;
   signal input oldCommitment;
-  signal input recipientPublicKey_X;
-  signal input recipientPublicKey_Y;
+  signal input recipientPublicKeyX;
+  signal input recipientPublicKeyY;
   signal input n;
   signal input pendingTransfersCommitments[max];
 
@@ -34,6 +36,8 @@ template ApplyAndTransfer(max) {
 
   component oldStateChecker = OldStateChecker();
   oldStateChecker.key <== cPrivateKey;
+  oldStateChecker.chainId <== chainId;
+  oldStateChecker.contractAddress <== contractAddress;
   oldStateChecker.oldAmount <== oldAmount;
   oldStateChecker.oldNonce <== oldNonce;
   oldStateChecker.oldCommitment <== oldCommitment;
@@ -75,6 +79,8 @@ template ApplyAndTransfer(max) {
 
   component newStateGenerator = NewStateGenerator();
   newStateGenerator.key <== cPrivateKey;
+  newStateGenerator.chainId <== chainId;
+  newStateGenerator.contractAddress <== contractAddress;
   newStateGenerator.newAmount <== newAmount;
   newStateGenerator.newNonce <== newNonce;
   newCommitment <== newStateGenerator.newCommitment;
@@ -83,16 +89,18 @@ template ApplyAndTransfer(max) {
   // Calculate shared key 
   component sharedKeyGenerator = SharedKeyGenerator();
   sharedKeyGenerator.privateKey <== cPrivateKey;
-  sharedKeyGenerator.publicKey_X <== recipientPublicKey_X;
-  sharedKeyGenerator.publicKey_Y <== recipientPublicKey_Y;
+  sharedKeyGenerator.publicKey_X <== recipientPublicKeyX;
+  sharedKeyGenerator.publicKey_Y <== recipientPublicKeyY;
   signal sharedKey <== sharedKeyGenerator.sharedKey;
 
   component transferStateGenerator = NewStateGenerator();
   transferStateGenerator.key <== sharedKey;
+  transferStateGenerator.chainId <== chainId;
+  transferStateGenerator.contractAddress <== contractAddress;
   transferStateGenerator.newAmount <== transferAmount;
   transferStateGenerator.newNonce <== newNonce;
   transferCommitment <== transferStateGenerator.newCommitment;
   transferEAmount <== transferStateGenerator.newEncryptedAmount;
 }
 
-component main { public [oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y, n, pendingTransfersCommitments] } = ApplyAndTransfer(10);
+component main { public [chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY, n, pendingTransfersCommitments] } = ApplyAndTransfer(10);

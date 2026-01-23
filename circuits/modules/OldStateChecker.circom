@@ -7,6 +7,8 @@ include "../utils/CommitmentGenerator.circom";
 
 template OldStateChecker() {
     signal input key;
+    signal input chainId;
+    signal input contractAddress;
     signal input oldAmount;
     signal input oldNonce;
     signal input oldCommitment;
@@ -16,6 +18,8 @@ template OldStateChecker() {
     component otkGenerator = OTKGenerator();
     otkGenerator.key <== key;
     otkGenerator.nonce <== oldNonce;
+    otkGenerator.chainId <== chainId;
+    otkGenerator.contractAddress <== contractAddress;
     oldOTK <== otkGenerator.out;
 
     component commitmentGenerator = CommitmentGenerator();

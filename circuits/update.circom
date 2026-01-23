@@ -11,6 +11,8 @@ template Update() {
     signal input oldAmount;
 
     // --- Public Inputs ---
+    signal input chainId;
+    signal input contractAddress;
     signal input operation; // 0 for deposit, 1 for withdraw // TODO: validate underflow 
     signal input amount;
     signal input oldNonce;
@@ -37,6 +39,8 @@ template Update() {
 
     component oldStateChecker = OldStateChecker();
     oldStateChecker.key <== cPrivateKey;
+    oldStateChecker.chainId <== chainId;
+    oldStateChecker.contractAddress <== contractAddress;
     oldStateChecker.oldAmount <== oldAmount;
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
@@ -46,10 +50,12 @@ template Update() {
 
     component newStateGenerator = NewStateGenerator();
     newStateGenerator.key <== cPrivateKey;
+    newStateGenerator.chainId <== chainId;
+    newStateGenerator.contractAddress <== contractAddress;
     newStateGenerator.newAmount <== newAmount;
     newStateGenerator.newNonce <== newNonce;
     newCommitment <== newStateGenerator.newCommitment;
     eAmount <== newStateGenerator.newEncryptedAmount;
 }
 
-component main {public [operation, amount, oldNonce, oldCommitment]} = Update();
+component main {public [chainId, contractAddress, operation, amount, oldNonce, oldCommitment]} = Update();

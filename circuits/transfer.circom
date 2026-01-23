@@ -15,10 +15,12 @@ template Transfer() {
   signal input transferAmount;
 
   // --- Public Inputs ---
+  signal input chainId;
+  signal input contractAddress;
   signal input oldNonce;
   signal input oldCommitment;
-  signal input recipientPublicKey_X;
-  signal input recipientPublicKey_Y;
+  signal input recipientPublicKeyX;
+  signal input recipientPublicKeyY;
 
   // --- Public Outputs ---
   signal output newCommitment;
@@ -28,6 +30,8 @@ template Transfer() {
 
   component oldStateChecker = OldStateChecker();
   oldStateChecker.key <== cPrivateKey;
+  oldStateChecker.chainId <== chainId;
+  oldStateChecker.contractAddress <== contractAddress;
   oldStateChecker.oldAmount <== oldAmount;
   oldStateChecker.oldNonce <== oldNonce;
   oldStateChecker.oldCommitment <== oldCommitment;  
@@ -43,6 +47,8 @@ template Transfer() {
 
   component newStateGenerator = NewStateGenerator();
   newStateGenerator.key <== cPrivateKey;
+  newStateGenerator.chainId <== chainId;
+  newStateGenerator.contractAddress <== contractAddress;
   newStateGenerator.newAmount <== newAmount;
   newStateGenerator.newNonce <== newNonce;
   newCommitment <== newStateGenerator.newCommitment;
@@ -51,17 +57,19 @@ template Transfer() {
   // Calculate shared key 
   component sharedKeyGenerator = SharedKeyGenerator();
   sharedKeyGenerator.privateKey <== cPrivateKey;
-  sharedKeyGenerator.publicKey_X <== recipientPublicKey_X;
-  sharedKeyGenerator.publicKey_Y <== recipientPublicKey_Y;
+  sharedKeyGenerator.publicKey_X <== recipientPublicKeyX;
+  sharedKeyGenerator.publicKey_Y <== recipientPublicKeyY;
   signal sharedKey <== sharedKeyGenerator.sharedKey;
 
   // TODO: Could be collision if sender and recipient make transfer to each other at the same nonce
   component transferStateGenerator = NewStateGenerator();
   transferStateGenerator.key <== sharedKey;
+  transferStateGenerator.chainId <== chainId;
+  transferStateGenerator.contractAddress <== contractAddress;
   transferStateGenerator.newAmount <== transferAmount;
   transferStateGenerator.newNonce <== newNonce;
   transferCommitment <== transferStateGenerator.newCommitment;
   transferEAmount <== transferStateGenerator.newEncryptedAmount;
 }
 
-component main { public [oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y] } = Transfer();
+component main { public [chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY] } = Transfer();

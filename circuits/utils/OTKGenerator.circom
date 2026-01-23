@@ -4,6 +4,9 @@ pragma circom 2.0.0;
 template OTKGenerator() {
     signal input key;
     signal input nonce;
+    signal input chainId;
+    signal input contractAddress;
+    
     signal output out;
 
     component hasher = Poseidon(2);

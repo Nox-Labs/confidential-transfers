@@ -13,6 +13,8 @@ template NewStateGenerator() {
     signal input key;
     signal input newAmount;
     signal input newNonce;
+    signal input chainId;
+    signal input contractAddress;
 
     signal output OTK;
     signal output newCommitment;
@@ -21,6 +23,8 @@ template NewStateGenerator() {
     component otkGenerator = OTKGenerator();
     otkGenerator.key <== key;
     otkGenerator.nonce <== newNonce;
+    otkGenerator.chainId <== chainId;
+    otkGenerator.contractAddress <== contractAddress;
     OTK <== otkGenerator.out;
 
     component commitmentGenerator = CommitmentGenerator();

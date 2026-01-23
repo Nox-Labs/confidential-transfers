@@ -16,6 +16,8 @@ template Apply(max) {
     signal input pendingTransfersOTKs[max];
 
     // --- Public Inputs ---
+    signal input chainId;
+    signal input contractAddress;
     signal input n;
     signal input oldNonce;
     signal input oldCommitment;
@@ -27,6 +29,8 @@ template Apply(max) {
 
     component oldStateChecker = OldStateChecker();
     oldStateChecker.key <== cPrivateKey;
+    oldStateChecker.chainId <== chainId;
+    oldStateChecker.contractAddress <== contractAddress;
     oldStateChecker.oldAmount <== oldAmount;
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
@@ -62,10 +66,12 @@ template Apply(max) {
 
     component newStateGenerator = NewStateGenerator();
     newStateGenerator.key <== cPrivateKey;
+    newStateGenerator.chainId <== chainId;
+    newStateGenerator.contractAddress <== contractAddress;
     newStateGenerator.newAmount <== newAmount;
     newStateGenerator.newNonce <== newNonce;
     newCommitment <== newStateGenerator.newCommitment;
     eAmount <== newStateGenerator.newEncryptedAmount;
 }
 
-component main { public [n, oldNonce, oldCommitment, pendingTransfersCommitments] } = Apply(10);
+component main { public [chainId, contractAddress, n, oldNonce, oldCommitment, pendingTransfersCommitments] } = Apply(10);
