@@ -13,11 +13,7 @@ library ConfidentialOFTMsgCodec {
      * @param _pt The pending transfer.
      * @return _msg The encoded message.
      */
-    function encode(address _recipient, PendingTransfer memory _pt)
-        internal
-        pure
-        returns (bytes memory _msg)
-    {
+    function encode(address _recipient, PendingTransfer memory _pt) internal pure returns (bytes memory _msg) {
         _msg = abi.encode(_recipient, _pt);
     }
 
@@ -25,11 +21,7 @@ library ConfidentialOFTMsgCodec {
         (recipient,) = abi.decode(_msg, (address, PendingTransfer));
     }
 
-    function pendingTransfer(bytes calldata _msg)
-        internal
-        pure
-        returns (PendingTransfer memory _pendingTransfer)
-    {
+    function pendingTransfer(bytes calldata _msg) internal pure returns (PendingTransfer memory _pendingTransfer) {
         (, _pendingTransfer) = abi.decode(_msg, (address, PendingTransfer));
     }
 }

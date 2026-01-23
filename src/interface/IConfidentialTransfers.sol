@@ -14,8 +14,8 @@ struct PendingTransfer {
 }
 
 struct Account {
-    uint256 pubKey_X;
-    uint256 pubKey_Y;
+    uint256 pubKeyX;
+    uint256 pubKeyY;
     Payload state;
     address[] requiredAuditors;
     AuditReport[] auditReports;
@@ -34,8 +34,8 @@ struct AuditReport {
 
 struct InitParams {
     /**
-     * @dev artifacts.output should be = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
-     * @dev verifier.pubSignals waiting for = [cPublicKey_X, cPublicKey_Y, newCommitment, eAmount]
+     * @dev artifacts.output should be = [cPublicKeyX, cPublicKeyY, newCommitment, eAmount]
+     * @dev verifier.pubSignals waiting for = [cPublicKeyX, cPublicKeyY, newCommitment, eAmount, chainId, contractAddress]
      */
     ZKArtifacts artifacts;
     AuditReport[] stateAuditReports;
@@ -44,8 +44,7 @@ struct InitParams {
 struct UpdateParams {
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, operation, amount, oldNonce,
-     * oldCommitment]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, chainId, contractAddress, operation, amount, oldNonce, oldCommitment]
      */
     ZKArtifacts artifacts;
     uint256 amount;
@@ -54,10 +53,8 @@ struct UpdateParams {
 
 struct TransferParams {
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment,
-     * transferEAmount]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment,
-     * transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y]
+     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY]
      */
     ZKArtifacts artifacts;
     address recipient;
@@ -68,8 +65,7 @@ struct TransferParams {
 struct ApplyParams {
     /**
      * @dev artifacts.output should be = [newCommitment, eAmount]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, n, oldNonce, oldCommitment,
-     * ...pendingTransfersCommitments[max]]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, chainId, contractAddress, n, oldNonce, oldCommitment, ...pendingTransfersCommitments[max]]
      */
     ZKArtifacts artifacts;
     uint256[] pendingTransfersIndexes;
@@ -78,11 +74,8 @@ struct ApplyParams {
 
 struct ApplyAndTransferParams {
     /**
-     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment,
-     * transferEAmount]
-     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment,
-     * transferEAmount, oldNonce, oldCommitment, recipientPublicKey_X, recipientPublicKey_Y, n,
-     * ...pendingTransfersCommitments[max]]
+     * @dev artifacts.output should be = [newCommitment, eAmount, transferCommitment, transferEAmount]
+     * @dev verifier.pubSignals waiting for = [newCommitment, eAmount, transferCommitment, transferEAmount, chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY, n, ...pendingTransfersCommitments[max]]
      */
     ZKArtifacts artifacts;
     address recipient;
@@ -103,18 +96,10 @@ interface IConfidentialTransfers {
     function removeRequiredAuditor(address auditor) external;
 
     event CInitialized(
-        address indexed account,
-        uint256 pubKey_X,
-        uint256 pubKey_Y,
-        Payload newState,
-        AuditReport[] auditReports
+        address indexed account, uint256 pubKeyX, uint256 pubKeyY, Payload newState, AuditReport[] auditReports
     );
-    event CDeposited(
-        address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports
-    );
-    event CWithdrawn(
-        address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports
-    );
+    event CDeposited(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
+    event CWithdrawn(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
     event CApplied(address indexed account, Payload newState, AuditReport[] auditReports);
     event CTransferred(
         address indexed sender,
@@ -130,7 +115,6 @@ interface IConfidentialTransfers {
 
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);
-    error VerifierCallFailed();
     error AccountNotInitialized();
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();

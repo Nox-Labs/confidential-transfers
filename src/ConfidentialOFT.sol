@@ -8,9 +8,7 @@ import {Payload, PendingTransfer} from "./interface/IConfidentialTransfers.sol";
 
 import {ConfidentialOFTMsgCodec} from "./lib/ConfidentialOFTMsgCodec.sol";
 
-import {
-    PlonkVerifier as ApplyAndTransferPlonkVerifier
-} from "./verifiers/ApplyAndTransferPlonkVerifier.sol";
+import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "./verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "./verifiers/ApplyPlonkVerifier.sol";
 import {PlonkVerifier as InitPlonkVerifier} from "./verifiers/InitPlonkVerifier.sol";
 import {PlonkVerifier as TransferPlonkVerifier} from "./verifiers/TransferPlonkVerifier.sol";
@@ -18,9 +16,7 @@ import {PlonkVerifier as UpdatePlonkVerifier} from "./verifiers/UpdatePlonkVerif
 
 import {Origin} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OAppReceiver.sol";
 import {MessagingFee} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OAppSender.sol";
-import {
-    IOAppMsgInspector
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppMsgInspector.sol";
+import {IOAppMsgInspector} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppMsgInspector.sol";
 import {OFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import {SendParam} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
@@ -30,8 +26,8 @@ import {MessagingReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/inte
 
 contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialOFT {
     constructor(
-        string memory _name,
-        string memory _symbol,
+        string memory _tokenName,
+        string memory _tokenSymbol,
         address _lzEndpoint,
         address _delegate,
         uint256 _maxPendingTransfers,
@@ -40,7 +36,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         UpdatePlonkVerifier _updateVerifier,
         TransferPlonkVerifier _transferVerifier,
         ApplyAndTransferPlonkVerifier _applyAndTransferVerifier
-    ) OFT(_name, _symbol, _lzEndpoint, _delegate) Ownable(_delegate) initializer {
+    ) OFT(_tokenName, _tokenSymbol, _lzEndpoint, _delegate) Ownable(_delegate) initializer {
         __ConfidentialTransfers_init(
             _maxPendingTransfers,
             _initVerifier,
@@ -63,20 +59,15 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         _transfer(from, to, amount);
     }
 
-    function quoteCSend(CSendParams calldata params)
-        public
-        view
-        returns (MessagingFee memory msgFee)
-    {
+    function quoteCSend(CSendParams calldata params) public view returns (MessagingFee memory msgFee) {
         Payload memory pendingTransferPackage = Payload({
             nonce: _getConfidentialTransferStorage().accounts[msg.sender].state.nonce + 1,
             commitment: params.transferParams.artifacts.outputs[2],
             eAmount: params.transferParams.artifacts.outputs[3]
         });
 
-        PendingTransfer memory pendingTransfer = PendingTransfer(
-            msg.sender, pendingTransferPackage, params.transferParams.transferAuditReports
-        );
+        PendingTransfer memory pendingTransfer =
+            PendingTransfer(msg.sender, pendingTransferPackage, params.transferParams.transferAuditReports);
 
         (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
 
@@ -91,8 +82,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         checkRequiredAuditor(msg.sender, params.transferParams.transferAuditReports)
         returns (MessagingReceipt memory msgReceipt)
     {
-        (Payload memory newState, PendingTransfer memory pendingTransfer) =
-            _cSend(params.transferParams);
+        (Payload memory newState, PendingTransfer memory pendingTransfer) = _cSend(params.transferParams);
 
         (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
 
@@ -121,29 +111,23 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
 
         message = abi.encode(uint8(0), msgPayload);
 
-        options = combineOptions(
-            _sendParam.dstEid, hasCompose ? SEND_AND_CALL : SEND, _sendParam.extraOptions
-        );
+        options = combineOptions(_sendParam.dstEid, hasCompose ? SEND_AND_CALL : SEND, _sendParam.extraOptions);
 
-        if (msgInspector != address(0)) {
-            IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
-        }
+        if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
     }
 
-    function _buildMsgAndOptions(
-        CSendParams calldata params,
-        PendingTransfer memory pendingTransfer
-    ) internal view returns (bytes memory message, bytes memory options) {
-        bytes memory msgPayload =
-            ConfidentialOFTMsgCodec.encode(params.transferParams.recipient, pendingTransfer);
+    function _buildMsgAndOptions(CSendParams calldata params, PendingTransfer memory pendingTransfer)
+        internal
+        view
+        returns (bytes memory message, bytes memory options)
+    {
+        bytes memory msgPayload = ConfidentialOFTMsgCodec.encode(params.transferParams.recipient, pendingTransfer);
 
         message = abi.encode(uint8(1), msgPayload);
 
         options = combineOptions(params.dstEid, SEND, params.extraOptions);
 
-        if (msgInspector != address(0)) {
-            IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
-        }
+        if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
     }
 
     function _lzReceive(
@@ -161,8 +145,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
             super._lzReceive(origin, guid, message[96:96 + len], executor, extraData);
         } else if (msgType == 1) {
             address toAddress = ConfidentialOFTMsgCodec.sendTo(message[96:96 + len]);
-            PendingTransfer memory pendingTransfer =
-                ConfidentialOFTMsgCodec.pendingTransfer(message[96:96 + len]);
+            PendingTransfer memory pendingTransfer = ConfidentialOFTMsgCodec.pendingTransfer(message[96:96 + len]);
             _cReceive(toAddress, pendingTransfer);
 
             emit ConfidentialOFTReceived(guid, origin.srcEid, toAddress, pendingTransfer);

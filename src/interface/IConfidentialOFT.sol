@@ -12,16 +12,12 @@ struct CSendParams {
 }
 
 interface IConfidentialOFT {
-    function cSend(
-        CSendParams calldata cSendParams,
-        MessagingFee calldata fee,
-        address refundAddress
-    ) external payable returns (MessagingReceipt memory msgReceipt);
-
-    function quoteCSend(CSendParams calldata cSendParams)
+    function cSend(CSendParams calldata cSendParams, MessagingFee calldata fee, address refundAddress)
         external
-        view
-        returns (MessagingFee memory msgFee);
+        payable
+        returns (MessagingReceipt memory msgReceipt);
+
+    function quoteCSend(CSendParams calldata cSendParams) external view returns (MessagingFee memory msgFee);
 
     event ConfidentialOFTSent(
         bytes32 indexed guid,

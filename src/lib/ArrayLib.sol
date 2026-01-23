@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {
-    AuditReport,
-    IConfidentialTransfers,
-    PendingTransfer
-} from "../interface/IConfidentialTransfers.sol";
+import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface/IConfidentialTransfers.sol";
 
 library ArrayLib {
     error DuplicateIndex();
@@ -18,9 +14,7 @@ library ArrayLib {
         }
     }
 
-    function removeByIndices(PendingTransfer[] storage self, uint256[] calldata indicesToRemove)
-        internal
-    {
+    function removeByIndices(PendingTransfer[] storage self, uint256[] calldata indicesToRemove) internal {
         assertUnique(indicesToRemove, self.length);
 
         uint256 len = self.length;
@@ -63,10 +57,7 @@ library ArrayLib {
         if (self.length == len) revert NotFound();
     }
 
-    function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers)
-        internal
-        pure
-    {
+    function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers) internal pure {
         bool[] memory seen = new bool[](lengthOfPendingTransfers);
         for (uint256 i = 0; i < indices.length; i++) {
             uint256 index = indices[i];
@@ -75,10 +66,7 @@ library ArrayLib {
         }
     }
 
-    function assertContains(address[] storage self, AuditReport[] calldata auditReports)
-        internal
-        view
-    {
+    function assertContains(address[] storage self, AuditReport[] calldata auditReports) internal view {
         if (self.length == 0) return;
         if (self.length > auditReports.length) revert NotFound();
 

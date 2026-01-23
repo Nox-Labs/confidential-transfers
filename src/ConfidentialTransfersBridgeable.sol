@@ -2,12 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ConfidentialTransfers} from "./ConfidentialTransfers.sol";
-import {
-    Payload,
-    PendingTransfer,
-    TransferParams,
-    UpdateParams
-} from "./interface/IConfidentialTransfers.sol";
+import {Payload, PendingTransfer, TransferParams, UpdateParams} from "./interface/IConfidentialTransfers.sol";
 
 abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
     /* EXTERNAL */
@@ -58,9 +53,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers {
 
         _getConfidentialTransferStorage().accounts[msg.sender].state = newState;
 
-        pendingTransfer = PendingTransfer(
-            msg.sender, pendingTransferPayload, transferParams.transferAuditReports
-        );
+        pendingTransfer = PendingTransfer(msg.sender, pendingTransferPayload, transferParams.transferAuditReports);
     }
 
     /* VIRTUAL INTERNAL */
