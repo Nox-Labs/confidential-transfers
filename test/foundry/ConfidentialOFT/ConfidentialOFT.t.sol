@@ -4,22 +4,15 @@ pragma solidity ^0.8.20;
 // Forge imports
 import "forge-std/console.sol";
 
-import {
-    MessagingReceipt
-} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {MessagingReceipt} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
 // OApp imports
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {MessagingFee} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
-import {
-    OFTReceipt,
-    SendParam
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
-import {
-    OFTComposeMsgCodec
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
+import {OFTReceipt, SendParam} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {OFTComposeMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 
 // ConfidentialOFT imports
 import {ConfidentialOFT} from "../../../src/ConfidentialOFT.sol";
@@ -33,14 +26,10 @@ import {
     UpdateParams,
     ZKArtifacts
 } from "../../../src/interface/IConfidentialTransfers.sol";
-import {
-    PlonkVerifier as ApplyAndTransferPlonkVerifier
-} from "../../../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
+import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../../../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "../../../src/verifiers/ApplyPlonkVerifier.sol";
 import {PlonkVerifier as InitPlonkVerifier} from "../../../src/verifiers/InitPlonkVerifier.sol";
-import {
-    PlonkVerifier as TransferPlonkVerifier
-} from "../../../src/verifiers/TransferPlonkVerifier.sol";
+import {PlonkVerifier as TransferPlonkVerifier} from "../../../src/verifiers/TransferPlonkVerifier.sol";
 import {PlonkVerifier as UpdatePlonkVerifier} from "../../../src/verifiers/UpdatePlonkVerifier.sol";
 
 // DevTools imports
@@ -125,9 +114,8 @@ contract ConfidentialOFTTest is TestHelperOz5 {
     function test_cDeposit_ShouldBurnTokens() public {
         uint256 totalSupplyBefore = aOFT.totalSupply();
         uint256 balanceOfUserABefore = aOFT.balanceOf(userA);
-        UpdateParams memory updateParams = UpdateParams(
-            ZKArtifacts(new uint256[](24), new uint256[](2)), initialBalance, new AuditReport[](0)
-        );
+        UpdateParams memory updateParams =
+            UpdateParams(ZKArtifacts(new uint256[](24), new uint256[](2)), initialBalance, new AuditReport[](0));
         vm.prank(userA);
         aOFT.cDeposit(updateParams);
         assertEq(aOFT.totalSupply(), totalSupplyBefore - initialBalance);
@@ -140,11 +128,7 @@ contract ConfidentialOFTTest is TestHelperOz5 {
         uint256 balanceOfUserABefore = aOFT.balanceOf(userA);
         vm.prank(userA);
         aOFT.cWithdraw(
-            UpdateParams(
-                ZKArtifacts(new uint256[](24), new uint256[](2)),
-                initialBalance,
-                new AuditReport[](0)
-            )
+            UpdateParams(ZKArtifacts(new uint256[](24), new uint256[](2)), initialBalance, new AuditReport[](0))
         );
         assertEq(aOFT.totalSupply(), totalSupplyBefore + initialBalance);
         assertEq(aOFT.balanceOf(userA), balanceOfUserABefore + initialBalance);
@@ -231,15 +215,8 @@ contract ConfidentialOFTTest is TestHelperOz5 {
         bytes memory composeMsg = hex"1234";
 
         // Set up parameters for the send operation
-        SendParam memory sendParam = SendParam(
-            bEid,
-            addressToBytes32(address(composer)),
-            tokensToSend,
-            tokensToSend,
-            options,
-            composeMsg,
-            ""
-        );
+        SendParam memory sendParam =
+            SendParam(bEid, addressToBytes32(address(composer)), tokensToSend, tokensToSend, options, composeMsg, "");
 
         // Quote the fee for sending tokens
         MessagingFee memory fee = aOFT.quoteSend(sendParam, false);
@@ -265,10 +242,7 @@ contract ConfidentialOFTTest is TestHelperOz5 {
         bytes32 guid_ = msgReceipt.guid;
         address to_ = address(composer);
         bytes memory composerMsg_ = OFTComposeMsgCodec.encode(
-            msgReceipt.nonce,
-            aEid,
-            oftReceipt.amountReceivedLD,
-            abi.encodePacked(addressToBytes32(userA), composeMsg)
+            msgReceipt.nonce, aEid, oftReceipt.amountReceivedLD, abi.encodePacked(addressToBytes32(userA), composeMsg)
         );
 
         // Execute the composed message

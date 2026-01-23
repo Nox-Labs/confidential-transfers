@@ -14,16 +14,16 @@ describe("ConfidentialTransfersBridgeable", function () {
       describe("State Changes", function () {
         it("Should mint tokens", async function () {
           expect(await f.token.balanceOf(await f.token.getAddress())).to.equal(
-            0n
+            0n,
           )
           const totalSupplyBefore = await f.token.totalSupply()
           await f.cWithdraw("cold", f.user1, f.WITHDRAW_AMOUNT)
           const totalSupplyAfter = await f.token.totalSupply()
           expect(totalSupplyAfter).to.equal(
-            totalSupplyBefore + f.WITHDRAW_AMOUNT
+            totalSupplyBefore + f.WITHDRAW_AMOUNT,
           )
           expect(await f.token.balanceOf(await f.token.getAddress())).to.equal(
-            0n
+            0n,
           )
         })
 
@@ -32,13 +32,13 @@ describe("ConfidentialTransfersBridgeable", function () {
           await f.cWithdraw("cold", f.user1, f.WITHDRAW_AMOUNT)
           const accountAfter = await f.token.getAccount(f.user1.address)
           expect(accountAfter.state.nonce).to.not.equal(
-            accountBefore.state.nonce
+            accountBefore.state.nonce,
           )
           expect(accountAfter.state.commitment).to.not.equal(
-            accountBefore.state.commitment
+            accountBefore.state.commitment,
           )
           expect(accountAfter.state.eAmount).to.not.equal(
-            accountBefore.state.eAmount
+            accountBefore.state.eAmount,
           )
         })
       })

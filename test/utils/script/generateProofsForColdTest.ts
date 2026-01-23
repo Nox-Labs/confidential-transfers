@@ -61,16 +61,16 @@ async function generateAndSaveProofs() {
         user2.index,
         await getNonce(user2),
         undefined,
-        indexes
+        indexes,
       )
       if (!isFileExists(filename) || execute) {
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user2.privateKey)
+          BigInt(user2.privateKey),
         )
         const ai = await sdk.getCircuitInputsForApply(
           user2.address,
           cPrivateKey,
-          indexes
+          indexes,
         )
 
         ai.pendingTransfersCommitments[1] = ai.pendingTransfersCommitments[0]
@@ -116,11 +116,11 @@ async function init(execute: boolean, user: typeof user1) {
   const filename = getProofFilenameForColdTest(
     "init",
     user.index,
-    await getNonce(user)
+    await getNonce(user),
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user.privateKey)
+    BigInt(user.privateKey),
   )
   const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
   let initProofOutput: ProofOutput
@@ -140,19 +140,19 @@ async function transfer(execute: boolean) {
     "transfer",
     user1.index,
     await getNonce(user1),
-    TRANSFER_AMOUNT
+    TRANSFER_AMOUNT,
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey)
+    BigInt(user1.privateKey),
   )
   const transferInputs = await sdk.getCircuitInputsForTransfer(
     user1.address,
     cPrivateKey,
     user2.address,
-    TRANSFER_AMOUNT
+    TRANSFER_AMOUNT,
   )
   let transferProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -162,7 +162,7 @@ async function transfer(execute: boolean) {
   }
   const transferParams = sdk.getTransferParams(
     user2.address,
-    transferProofOutput
+    transferProofOutput,
   )
   if (execute) await token.connect(user1).cTransfer(transferParams)
   saveProofToFile(filename, transferProofOutput)
@@ -173,18 +173,18 @@ async function deposit(execute: boolean) {
     "deposit",
     user1.index,
     await getNonce(user1),
-    DEPOSIT_AMOUNT
+    DEPOSIT_AMOUNT,
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey)
+    BigInt(user1.privateKey),
   )
   const depositInputs = await sdk.getCircuitInputsForDeposit(
     user1.address,
     cPrivateKey,
-    DEPOSIT_AMOUNT
+    DEPOSIT_AMOUNT,
   )
   let depositProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -202,18 +202,18 @@ async function withdraw(execute: boolean) {
     "withdraw",
     user1.index,
     await getNonce(user1),
-    WITHDRAW_AMOUNT
+    WITHDRAW_AMOUNT,
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey)
+    BigInt(user1.privateKey),
   )
   const withdrawInputs = await sdk.getCircuitInputsForWithdraw(
     user1.address,
     cPrivateKey,
-    WITHDRAW_AMOUNT
+    WITHDRAW_AMOUNT,
   )
   let withdrawProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -232,16 +232,16 @@ async function apply(execute: boolean, indexes: number[]) {
     user2.index,
     await getNonce(user2),
     undefined,
-    indexes
+    indexes,
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey)
+    BigInt(user2.privateKey),
   )
   const applyInputs = await sdk.getCircuitInputsForApply(
     user2.address,
     cPrivateKey,
-    indexes
+    indexes,
   )
   let applyProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -260,31 +260,31 @@ async function applyAndTransfer(execute: boolean, indexes: number[]) {
     user2.index,
     await getNonce(user2),
     undefined,
-    indexes
+    indexes,
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey)
+    BigInt(user2.privateKey),
   )
   const applyAndTransferInputs = await sdk.getCircuitInputsForApplyAndTransfer(
     user2.address,
     cPrivateKey,
     indexes,
     user1.address,
-    TRANSFER_AMOUNT
+    TRANSFER_AMOUNT,
   )
   let applyAndTransferProofOutput: ProofOutput
   if (isFileExists(filename)) {
     applyAndTransferProofOutput = getProofOutput(filename)
   } else {
     applyAndTransferProofOutput = await sdk.generateApplyAndTransferProof(
-      applyAndTransferInputs
+      applyAndTransferInputs,
     )
   }
   const applyAndTransferParams = sdk.getApplyAndTransferParams(
     user1.address,
     indexes,
-    applyAndTransferProofOutput
+    applyAndTransferProofOutput,
   )
   if (execute)
     await token.connect(user2).cApplyAndTransfer(applyAndTransferParams)
@@ -300,7 +300,7 @@ function saveProofToFile(filename: string, data: ProofOutput) {
   const jsonString = JSON.stringify(
     data,
     (_, value) => (typeof value === "bigint" ? value.toString() : value),
-    2
+    2,
   )
   fs.writeFileSync(filePath, jsonString)
   console.log(`- Saved ${filename}.json`)

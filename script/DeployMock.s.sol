@@ -6,9 +6,7 @@ import {console} from "forge-std/console.sol";
 
 import {MockConfidentialOFT} from "../test/utils/mock/MockConfidentialOFT.sol";
 
-import {
-    PlonkVerifier as ApplyAndTransferPlonkVerifier
-} from "../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
+import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "../src/verifiers/ApplyPlonkVerifier.sol";
 import {PlonkVerifier as InitPlonkVerifier} from "../src/verifiers/InitPlonkVerifier.sol";
 import {PlonkVerifier as TransferPlonkVerifier} from "../src/verifiers/TransferPlonkVerifier.sol";

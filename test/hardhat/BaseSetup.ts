@@ -21,7 +21,10 @@ const pk = {
   user2: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
 }
 
-async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
+async function setup(
+  target: "MockERC20" | "MockERC20Bridgeable",
+  isMockVerifier: boolean,
+) {
   const { ethers, networkHelpers } = conn
   const INITIAL_BALANCE = ethers.parseEther("1000")
 
@@ -31,7 +34,9 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   }
 
   const getVerifierPath = (name: string) =>
-    `src/verifiers/${name}PlonkVerifier.sol:PlonkVerifier`
+    isMockVerifier
+      ? "test/utils/mock/MockVerifier.sol:MockVerifier"
+      : `src/verifiers/${name}PlonkVerifier.sol:PlonkVerifier`
 
   const iv = await ethers.deployContract(getVerifierPath("Init"))
   const av = await ethers.deployContract(getVerifierPath("Apply"))
@@ -51,7 +56,7 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
     new ethers.Wallet(pk.user0, ethers.provider),
     {
       index: 0,
-    }
+    },
   )
   const user1 = Object.assign(new ethers.Wallet(pk.user1, ethers.provider), {
     index: 1,
@@ -60,12 +65,12 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
     new ethers.Wallet(pk.user2, ethers.provider),
     {
       index: 2,
-    }
+    },
   )
 
   await networkHelpers.setBalance(
     userUninitialized.address,
-    ethers.parseEther("10000")
+    ethers.parseEther("10000"),
   )
   await networkHelpers.setBalance(user1.address, ethers.parseEther("10000"))
   await networkHelpers.setBalance(user2.address, ethers.parseEther("10000"))
@@ -83,21 +88,21 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
 
   const cInit = async (
     _type: "hot" | "cold",
-    user: typeof user1
+    user: typeof user1,
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateInitProof(
-        await sdk.getCircuitInputsForInit(cPrivateKey)
+        await sdk.getCircuitInputsForInit(cPrivateKey),
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "init",
         user.index,
-        await getNonce(user)
+        await getNonce(user),
       )
       proofOutput = getProofOutput(filename)
     }
@@ -109,22 +114,22 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   const cDeposit = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    amount: bigint
+    amount: bigint,
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateUpdateProof(
-        await sdk.getCircuitInputsForDeposit(user.address, cPrivateKey, amount)
+        await sdk.getCircuitInputsForDeposit(user.address, cPrivateKey, amount),
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "deposit",
         user.index,
         await getNonce(user),
-        amount
+        amount,
       )
       proofOutput = getProofOutput(filename)
     }
@@ -136,22 +141,26 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   const cWithdraw = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    amount: bigint
+    amount: bigint,
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateUpdateProof(
-        await sdk.getCircuitInputsForWithdraw(user.address, cPrivateKey, amount)
+        await sdk.getCircuitInputsForWithdraw(
+          user.address,
+          cPrivateKey,
+          amount,
+        ),
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "withdraw",
         user.index,
         await getNonce(user),
-        amount
+        amount,
       )
       proofOutput = getProofOutput(filename)
     }
@@ -164,27 +173,27 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
     _type: "hot" | "cold",
     user: typeof user1,
     to: string,
-    amount: bigint
+    amount: bigint,
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateTransferProof(
         await sdk.getCircuitInputsForTransfer(
           user.address,
           cPrivateKey,
           to,
-          amount
-        )
+          amount,
+        ),
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "transfer",
         user.index,
         await getNonce(user),
-        amount
+        amount,
       )
       proofOutput = getProofOutput(filename)
     }
@@ -196,19 +205,19 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   const cApply = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    pendingTransfersIndexes: number[]
+    pendingTransfersIndexes: number[],
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateApplyProof(
         await sdk.getCircuitInputsForApply(
           user.address,
           cPrivateKey,
-          pendingTransfersIndexes
-        )
+          pendingTransfersIndexes,
+        ),
       )
     } else {
       const filename = getProofFilenameForColdTest(
@@ -216,7 +225,7 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
         user.index,
         await getNonce(user),
         undefined,
-        pendingTransfersIndexes
+        pendingTransfersIndexes,
       )
       proofOutput = getProofOutput(filename)
     }
@@ -230,12 +239,12 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
     user: typeof user1,
     pendingTransfersIndexes: number[],
     to: string,
-    amount: bigint
+    amount: bigint,
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey)
+        BigInt(user.privateKey),
       )
       proofOutput = await sdk.generateApplyAndTransferProof(
         await sdk.getCircuitInputsForApplyAndTransfer(
@@ -243,8 +252,8 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
           cPrivateKey,
           pendingTransfersIndexes,
           to,
-          amount
-        )
+          amount,
+        ),
       )
     } else {
       const filename = getProofFilenameForColdTest(
@@ -252,14 +261,14 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
         user.index,
         await getNonce(user),
         undefined,
-        pendingTransfersIndexes
+        pendingTransfersIndexes,
       )
       proofOutput = getProofOutput(filename)
     }
     const params = sdk.getApplyAndTransferParams(
       to,
       pendingTransfersIndexes,
-      proofOutput
+      proofOutput,
     )
     await token.connect(user).cApplyAndTransfer(params)
     return proofOutput
@@ -280,14 +289,14 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
     user: number,
     nonce: bigint,
     amount?: bigint,
-    indexes?: number[]
+    indexes?: number[],
   ) => {
     const filename = getProofFilenameForColdTest(
       operation,
       user,
       nonce,
       amount,
-      indexes
+      indexes,
     )
     if (!fs.existsSync(path.join(PROOFS_DIR, `${filename}.json`))) {
       throw new Error(`Proof file ${filename} not found`)
@@ -296,10 +305,10 @@ async function setup(target: "MockERC20" | "MockERC20Bridgeable") {
   }
 
   const { cPrivateKey: user1CPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey)
+    BigInt(user1.privateKey),
   )
   const { cPrivateKey: user2CPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey)
+    BigInt(user2.privateKey),
   )
 
   return {
@@ -351,17 +360,17 @@ async function initialize(s: Awaited<ReturnType<typeof setup>>) {
 }
 
 export async function baseSetupUninitializedUsers() {
-  return setup("MockERC20")
-}
-
-export async function baseSetupUninitializedUsersBridgeable() {
-  return setup("MockERC20Bridgeable")
+  return setup("MockERC20", false)
 }
 
 export async function baseSetup() {
-  return initialize(await baseSetupUninitializedUsers())
+  return initialize(await setup("MockERC20", false))
+}
+
+export async function baseSetupUninitializedUsersBridgeable() {
+  return setup("MockERC20Bridgeable", true)
 }
 
 export async function baseSetupBridgeable() {
-  return initialize(await baseSetupUninitializedUsersBridgeable())
+  return initialize(await setup("MockERC20Bridgeable", true))
 }

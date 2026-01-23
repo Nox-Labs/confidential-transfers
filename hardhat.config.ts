@@ -23,4 +23,9 @@ export default defineConfig({
   typechain: {
     outDir: "./out/hardhat/typechain",
   },
+  test: {
+    mocha: {
+      parallel: true,
+    },
+  },
 })

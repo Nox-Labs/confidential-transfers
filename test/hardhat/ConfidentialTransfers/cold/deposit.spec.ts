@@ -38,19 +38,19 @@ describe("ConfidentialTransfers", function () {
 
         it("Should update user on-chain public balance", async function () {
           expect(await f.token.balanceOf(f.user1.address)).to.equal(
-            f.INITIAL_BALANCE - f.DEPOSIT_AMOUNT
+            f.INITIAL_BALANCE - f.DEPOSIT_AMOUNT,
           )
         })
 
         it("Should update user on-chain confidential balance", async function () {
           expect(
-            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey)
+            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey),
           ).to.equal(f.DEPOSIT_AMOUNT)
         })
 
         it("Should update balance of tokens in the shielded pool (contract's balance)", async function () {
           expect(await f.token.balanceOf(await f.token.getAddress())).to.equal(
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
         })
 
@@ -58,7 +58,7 @@ describe("ConfidentialTransfers", function () {
           await f.cDeposit("cold", f.user1, f.DEPOSIT_AMOUNT)
 
           expect(
-            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey)
+            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey),
           ).to.equal(f.DEPOSIT_AMOUNT * 2n)
         })
 
@@ -68,13 +68,13 @@ describe("ConfidentialTransfers", function () {
             "deposit",
             f.user1.index,
             nonce,
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           const auditorReports = await f.sdk.createStateAuditReport(
             f.user1CPrivateKey,
             nonce,
-            [f.user2.address]
+            [f.user2.address],
           )
           const params = f.sdk.getDepositParams(proof, auditorReports)
           await f.token.connect(f.user1).cDeposit(params)
@@ -82,7 +82,7 @@ describe("ConfidentialTransfers", function () {
           expect(accountAfter.auditReports.length).to.equal(1)
           expect(accountAfter.auditReports[0].auditor).to.equal(f.user2.address)
           expect(accountAfter.auditReports[0].eOTK).to.equal(
-            auditorReports[0].eOTK
+            auditorReports[0].eOTK,
           )
         })
 
@@ -91,13 +91,13 @@ describe("ConfidentialTransfers", function () {
             "deposit",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           const params = f.sdk.getDepositParams(proof)
           await expect(f.token.connect(f.user1).cDeposit(params)).to.emit(
             f.token,
-            "CDeposited"
+            "CDeposited",
           )
         })
       })
@@ -106,7 +106,7 @@ describe("ConfidentialTransfers", function () {
         it("Should revert if the account is not initialized", async function () {
           const params = f.sdk.getDepositParams(f.MOCK_PROOF_OUTPUT)
           await expect(
-            f.token.connect(f.userUninitialized).cDeposit(params)
+            f.token.connect(f.userUninitialized).cDeposit(params),
           ).to.be.revertedWithCustomError(f.token, "AccountNotInitialized")
         })
 
@@ -115,13 +115,13 @@ describe("ConfidentialTransfers", function () {
             "deposit",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           proof.pubSignals[0] = BigInt(proof.pubSignals[0]) + 1n
           const params = f.sdk.getDepositParams(proof)
           await expect(
-            f.token.connect(f.user1).cDeposit(params)
+            f.token.connect(f.user1).cDeposit(params),
           ).to.be.revertedWithCustomError(f.token, "ProofVerificationFailed")
         })
 
@@ -130,13 +130,13 @@ describe("ConfidentialTransfers", function () {
             "deposit",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           const params = f.sdk.getDepositParams(proof)
           params.artifacts.outputs.pop()
           await expect(
-            f.token.connect(f.user1).cDeposit(params)
+            f.token.connect(f.user1).cDeposit(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
@@ -145,13 +145,13 @@ describe("ConfidentialTransfers", function () {
             "deposit",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.DEPOSIT_AMOUNT
+            f.DEPOSIT_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           const params = f.sdk.getDepositParams(proof)
           params.artifacts.proof.pop()
           await expect(
-            f.token.connect(f.user1).cDeposit(params)
+            f.token.connect(f.user1).cDeposit(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
@@ -159,7 +159,7 @@ describe("ConfidentialTransfers", function () {
           await f.token.connect(f.user1).addRequiredAuditor(f.user2.address)
           const params = f.sdk.getDepositParams(f.MOCK_PROOF_OUTPUT)
           await expect(
-            f.token.connect(f.user1).cDeposit(params)
+            f.token.connect(f.user1).cDeposit(params),
           ).to.be.revertedWithCustomError(f.token, "NotFound")
         })
       })

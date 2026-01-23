@@ -2,6 +2,7 @@ import { expect } from "chai"
 import { conn, baseSetupBridgeable } from "../../BaseSetup.js"
 
 describe("ConfidentialTransfersBridgeable", function () {
+  let snapshot: Awaited<ReturnType<typeof conn.networkHelpers.takeSnapshot>>
   describe("Cold:ConfidentialTransfersBridgeable", function () {
     let f: Awaited<ReturnType<typeof baseSetupBridgeable>>
     describe("", function () {
@@ -42,7 +43,7 @@ describe("ConfidentialTransfersBridgeable", function () {
               "transfer",
               f.user1.index,
               await f.getNonce(f.user1),
-              f.TRANSFER_AMOUNT
+              f.TRANSFER_AMOUNT,
             )
             const proof = f.getProofOutput(filename)
             const params = f.sdk.getTransferParams(f.user2.address, proof)
@@ -50,13 +51,13 @@ describe("ConfidentialTransfersBridgeable", function () {
             await f.token.connect(f.user1).bridge(params)
             const accountAfter = await f.token.getAccount(f.user1.address)
             expect(accountAfter.state.nonce).to.not.equal(
-              accountBefore.state.nonce
+              accountBefore.state.nonce,
             )
             expect(accountAfter.state.commitment).to.not.equal(
-              accountBefore.state.commitment
+              accountBefore.state.commitment,
             )
             expect(accountAfter.state.eAmount).to.not.equal(
-              accountBefore.state.eAmount
+              accountBefore.state.eAmount,
             )
           })
         })

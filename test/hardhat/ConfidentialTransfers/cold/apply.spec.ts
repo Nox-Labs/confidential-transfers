@@ -39,7 +39,7 @@ describe("ConfidentialTransfers", function () {
 
         it("Should update user on-chain confidential balance", async function () {
           expect(
-            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey)
+            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey),
           ).to.equal(f.TRANSFER_AMOUNT)
         })
 
@@ -62,10 +62,10 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(2)
           expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[2].payload.commitment
+            accountBefore.pendingTransfers[2].payload.commitment,
           )
           expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[1].payload.commitment
+            accountBefore.pendingTransfers[1].payload.commitment,
           )
         })
 
@@ -76,10 +76,10 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(2)
           expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[0].payload.commitment
+            accountBefore.pendingTransfers[0].payload.commitment,
           )
           expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[2].payload.commitment
+            accountBefore.pendingTransfers[2].payload.commitment,
           )
         })
 
@@ -90,10 +90,10 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(2)
           expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[0].payload.commitment
+            accountBefore.pendingTransfers[0].payload.commitment,
           )
           expect(accountAfter.pendingTransfers[1].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[1].payload.commitment
+            accountBefore.pendingTransfers[1].payload.commitment,
           )
         })
 
@@ -104,11 +104,11 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(1)
           expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[2].payload.commitment
+            accountBefore.pendingTransfers[2].payload.commitment,
           )
 
           expect(
-            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey)
+            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey),
           ).to.equal(f.TRANSFER_AMOUNT * 2n)
         })
 
@@ -119,11 +119,11 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(1)
           expect(accountAfter.pendingTransfers[0].payload.commitment).to.equal(
-            accountBefore.pendingTransfers[1].payload.commitment
+            accountBefore.pendingTransfers[1].payload.commitment,
           )
 
           expect(
-            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey)
+            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey),
           ).to.equal(f.TRANSFER_AMOUNT * 2n)
         })
 
@@ -133,7 +133,7 @@ describe("ConfidentialTransfers", function () {
 
           expect(accountAfter.pendingTransfers.length).to.equal(0)
           expect(
-            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey)
+            await f.sdk.сBalanceOf(f.user2.address, f.user2CPrivateKey),
           ).to.equal(f.TRANSFER_AMOUNT * 3n)
         })
       })
@@ -148,7 +148,7 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               await f.getNonce(f.user2),
               undefined,
-              indexes
+              indexes,
             )
 
             const proof = f.getProofOutput(filename)
@@ -156,7 +156,7 @@ describe("ConfidentialTransfers", function () {
             await expect(
               f.token
                 .connect(f.user2)
-                .cApply(f.sdk.getApplyParams(indexes, proof))
+                .cApply(f.sdk.getApplyParams(indexes, proof)),
             ).to.be.revertedWithCustomError(f.token, "ProofVerificationFailed")
           })
 
@@ -167,14 +167,14 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               await f.getNonce(f.user2),
               undefined,
-              indexes
+              indexes,
             )
 
             const proof = f.getProofOutput(filename)
             const params = f.sdk.getApplyParams(indexes, proof)
             params.artifacts.outputs.pop()
             await expect(
-              f.token.connect(f.user2).cApply(params)
+              f.token.connect(f.user2).cApply(params),
             ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
           })
 
@@ -185,13 +185,13 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               await f.getNonce(f.user2),
               undefined,
-              indexes
+              indexes,
             )
             const proof = f.getProofOutput(filename)
             const params = f.sdk.getApplyParams(indexes, proof)
             params.artifacts.proof.pop()
             await expect(
-              f.token.connect(f.user2).cApply(params)
+              f.token.connect(f.user2).cApply(params),
             ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
           })
 
@@ -200,7 +200,7 @@ describe("ConfidentialTransfers", function () {
               "cold",
               f.user1,
               f.user2.address,
-              f.TRANSFER_AMOUNT
+              f.TRANSFER_AMOUNT,
             )
 
             const indexes = [0, 0]
@@ -209,13 +209,13 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               await f.getNonce(f.user2),
               undefined,
-              indexes
+              indexes,
             )
             const proof = f.getProofOutput(filename)
             await expect(
               f.token
                 .connect(f.user2)
-                .cApply(f.sdk.getApplyParams(indexes, proof))
+                .cApply(f.sdk.getApplyParams(indexes, proof)),
             ).to.be.revertedWithCustomError(f.token, "DuplicateIndex")
           })
 
@@ -224,12 +224,12 @@ describe("ConfidentialTransfers", function () {
               "cold",
               f.user1,
               f.user2.address,
-              f.TRANSFER_AMOUNT
+              f.TRANSFER_AMOUNT,
             )
             await f.token.connect(f.user2).addRequiredAuditor(f.user1.address)
             const params = f.sdk.getApplyParams([0], f.MOCK_PROOF_OUTPUT)
             await expect(
-              f.token.connect(f.user2).cApply(params)
+              f.token.connect(f.user2).cApply(params),
             ).to.be.revertedWithCustomError(f.token, "NotFound")
           })
         })
@@ -242,23 +242,23 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               nonce,
               undefined,
-              [0]
+              [0],
             )
             const proof = f.getProofOutput(proofFilename)
             const stateAuditorReports = await f.sdk.createStateAuditReport(
               f.user2CPrivateKey,
               nonce,
-              [f.user1.address]
+              [f.user1.address],
             )
             const params = f.sdk.getApplyParams([0], proof, stateAuditorReports)
             await f.token.connect(f.user2).cApply(params)
             const accountAfter = await f.token.getAccount(f.user2.address)
             expect(accountAfter.auditReports.length).to.equal(1)
             expect(accountAfter.auditReports[0].auditor).to.equal(
-              f.user1.address
+              f.user1.address,
             )
             expect(accountAfter.auditReports[0].eOTK).to.equal(
-              stateAuditorReports[0].eOTK
+              stateAuditorReports[0].eOTK,
             )
           })
 
@@ -268,13 +268,13 @@ describe("ConfidentialTransfers", function () {
               f.user2.index,
               await f.getNonce(f.user2),
               undefined,
-              [0]
+              [0],
             )
             const proof = f.getProofOutput(proofFilename)
             const params = f.sdk.getApplyParams([0], proof)
             await expect(f.token.connect(f.user2).cApply(params)).to.emit(
               f.token,
-              "CApplied"
+              "CApplied",
             )
           })
         })

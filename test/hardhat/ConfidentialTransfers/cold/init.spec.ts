@@ -38,26 +38,26 @@ describe("ConfidentialTransfers", function () {
 
         it("Should update public key", async function () {
           const keys = await f.SDK.deriveConfidentialKeys(
-            BigInt(f.user1.privateKey)
+            BigInt(f.user1.privateKey),
           )
 
           const accountAfter = await f.token.getAccount(f.user1.address)
 
-          expect(accountAfter.pubKey_X).to.equal(keys.cPublicKey_X)
-          expect(accountAfter.pubKey_Y).to.equal(keys.cPublicKey_Y)
+          expect(accountAfter.pubKeyX).to.equal(keys.cPublicKeyX)
+          expect(accountAfter.pubKeyY).to.equal(keys.cPublicKeyY)
         })
 
         it("Should update auditor reports", async function () {
           const filename = getProofFilenameForColdTest(
             "init",
             f.user1.index,
-            await f.getNonce(f.user2)
+            await f.getNonce(f.user2),
           )
           const proof = f.getProofOutput(filename)
           const auditorReports = await f.sdk.createStateAuditReport(
             f.user2CPrivateKey,
             await f.getNonce(f.user2),
-            [f.user1.address]
+            [f.user1.address],
           )
           const params = f.sdk.getInitParams(proof, auditorReports)
           await f.token.connect(f.user2).cInit(params)
@@ -65,7 +65,7 @@ describe("ConfidentialTransfers", function () {
           expect(accountAfter.auditReports.length).to.equal(1)
           expect(accountAfter.auditReports[0].auditor).to.equal(f.user1.address)
           expect(accountAfter.auditReports[0].eOTK).to.equal(
-            auditorReports[0].eOTK
+            auditorReports[0].eOTK,
           )
         })
 
@@ -73,13 +73,13 @@ describe("ConfidentialTransfers", function () {
           const filename = getProofFilenameForColdTest(
             "init",
             f.user2.index,
-            await f.getNonce(f.user2)
+            await f.getNonce(f.user2),
           )
           const proof = f.getProofOutput(filename)
           const params = f.sdk.getInitParams(proof)
           await expect(f.token.connect(f.user2).cInit(params)).to.emit(
             f.token,
-            "CInitialized"
+            "CInitialized",
           )
         })
       })
@@ -88,7 +88,7 @@ describe("ConfidentialTransfers", function () {
         it("Should revert if the proof verification fails", async function () {
           const params = f.sdk.getInitParams(f.MOCK_PROOF_OUTPUT)
           await expect(
-            f.token.connect(f.user1).cInit(params)
+            f.token.connect(f.user1).cInit(params),
           ).to.be.revertedWithCustomError(f.token, "ProofVerificationFailed")
         })
 
@@ -97,7 +97,7 @@ describe("ConfidentialTransfers", function () {
           await expect(
             f.token
               .connect(f.user1)
-              .cInit(f.sdk.getInitParams(f.MOCK_PROOF_OUTPUT))
+              .cInit(f.sdk.getInitParams(f.MOCK_PROOF_OUTPUT)),
           ).to.be.revertedWithCustomError(f.token, "AccountAlreadyInitialized")
         })
 
@@ -106,7 +106,7 @@ describe("ConfidentialTransfers", function () {
           const params = f.sdk.getInitParams(proof)
           params.artifacts.outputs.pop()
           await expect(
-            f.token.connect(f.user1).cInit(params)
+            f.token.connect(f.user1).cInit(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
@@ -115,7 +115,7 @@ describe("ConfidentialTransfers", function () {
           const params = f.sdk.getInitParams(proof)
           params.artifacts.proof.pop()
           await expect(
-            f.token.connect(f.user1).cInit(params)
+            f.token.connect(f.user1).cInit(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
@@ -124,7 +124,7 @@ describe("ConfidentialTransfers", function () {
           await f.token.connect(f.user1).addRequiredAuditor(f.user2.address)
           const params = f.sdk.getInitParams(f.MOCK_PROOF_OUTPUT)
           await expect(
-            f.token.connect(f.user1).cInit(params)
+            f.token.connect(f.user1).cInit(params),
           ).to.be.revertedWithCustomError(f.token, "NotFound")
         })
       })

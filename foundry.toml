@@ -27,9 +27,9 @@ mainnet-sepolia = "https://0xrpc.io/sep"
 # mainnet-sepolia = "http://127.0.0.1:8545"
 
 [fmt]
-line_length = 100
+line_length = 120
 tab_width = 4
-wrap_comments = true
+wrap_comments = false
 int_types = "long"
 quote_style = "double"
 number_underscore = "thousands"

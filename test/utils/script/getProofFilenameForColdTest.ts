@@ -19,7 +19,7 @@ export const getProofFilenameForColdTest = (
   user: number,
   nonce: bigint | number,
   amount?: bigint,
-  indexes?: number[]
+  indexes?: number[],
 ) =>
   `${operation}-user:${user}-nonce:${nonce}${
     amount ? `-amount:${amount.toString()}` : ""
