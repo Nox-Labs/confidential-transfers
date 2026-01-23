@@ -16,9 +16,13 @@ export class Inputs extends Token {
    * @returns
    */
   async getCircuitInputsForInit(
-    cPrivateKey: bigint
+    cPrivateKey: bigint,
   ): Promise<CircuitInitInputs> {
+    const network = await this.token.runner?.provider?.getNetwork()
+    if (!network) throw new Error("Network not found")
     return {
+      chainId: BigInt(network.chainId),
+      contractAddress: BigInt(await this.token.getAddress()),
       cPrivateKey,
     }
   }
@@ -26,26 +30,26 @@ export class Inputs extends Token {
   async getCircuitInputsForDeposit(
     account: string,
     cPrivateKey: bigint,
-    amount: bigint
+    amount: bigint,
   ): Promise<CircuitUpdateInputs> {
     return await this.getCircuitInputsForUpdate(
       account,
       cPrivateKey,
       0n,
-      amount
+      amount,
     )
   }
 
   async getCircuitInputsForWithdraw(
     account: string,
     cPrivateKey: bigint,
-    amount: bigint
+    amount: bigint,
   ): Promise<CircuitUpdateInputs> {
     return await this.getCircuitInputsForUpdate(
       account,
       cPrivateKey,
       1n,
-      amount
+      amount,
     )
   }
 
@@ -53,7 +57,7 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     to: string,
-    transferAmount: bigint
+    transferAmount: bigint,
   ): Promise<CircuitTransferInputs> {
     const senderAccountData = await this.token.getAccount(account)
 
@@ -62,30 +66,35 @@ export class Inputs extends Token {
     const oldAmount = await Token.decryptAmount(
       cPrivateKey,
       oldNonce,
-      senderAccountData.state.eAmount
+      senderAccountData.state.eAmount,
     )
 
-    const { pubKey_X, pubKey_Y } = await this.token.getAccount(to)
+    const { pubKeyX, pubKeyY } = await this.token.getAccount(to)
+
+    const network = await this.token.runner?.provider?.getNetwork()
+    if (!network) throw new Error("Network not found")
 
     return {
+      chainId: BigInt(network.chainId),
+      contractAddress: BigInt(await this.token.getAddress()),
       cPrivateKey,
       oldAmount,
       oldNonce,
       oldCommitment: BigInt(senderAccountData.state.commitment),
       transferAmount,
-      recipientPublicKey_X: pubKey_X,
-      recipientPublicKey_Y: pubKey_Y,
+      recipientPublicKeyX: pubKeyX,
+      recipientPublicKeyY: pubKeyY,
     }
   }
 
   async getCircuitInputsForApply(
     account: string,
     cPrivateKey: bigint,
-    pendingTransfersIndexes: number[]
+    pendingTransfersIndexes: number[],
   ): Promise<CircuitApplyInputs> {
     if (pendingTransfersIndexes.length > this.MAX_PENDING_TRANSFERS_APPLY)
       throw new Error(
-        `Max pending transfers apply is ${this.MAX_PENDING_TRANSFERS_APPLY}`
+        `Max pending transfers apply is ${this.MAX_PENDING_TRANSFERS_APPLY}`,
       )
 
     const senderAccountData = await this.token.getAccount(account)
@@ -95,37 +104,37 @@ export class Inputs extends Token {
     const oldAmount = await Token.decryptAmount(
       cPrivateKey,
       oldNonce,
-      senderAccountData.state.eAmount
+      senderAccountData.state.eAmount,
     )
 
     const filteredPendingTransfers = senderAccountData.pendingTransfers.filter(
-      (_, index) => pendingTransfersIndexes.includes(index)
+      (_, index) => pendingTransfersIndexes.includes(index),
     )
 
-    const { pubKey_Xs, pubKey_Ys } = await this.token.getCPublicKeys(
-      filteredPendingTransfers.map((transfer) => transfer.sender)
+    const { pubKeyXs, pubKeyYs } = await this.token.getCPublicKeys(
+      filteredPendingTransfers.map((transfer) => transfer.sender),
     )
 
     const decryptedAmountsWithOTKs = await Promise.all(
       filteredPendingTransfers.map(async (transfer, index) => {
-        const pubKey_X = pubKey_Xs[index]
-        const pubKey_Y = pubKey_Ys[index]
+        const pubKeyX = pubKeyXs[index]
+        const pubKeyY = pubKeyYs[index]
         const sharedKey = await Token.deriveSharedKey(
           cPrivateKey,
-          pubKey_X,
-          pubKey_Y
+          pubKeyX,
+          pubKeyY,
         )
 
         const amount = await Token.decryptAmount(
           sharedKey,
           transfer.payload.nonce,
-          transfer.payload.eAmount
+          transfer.payload.eAmount,
         )
 
         const otk = await Token.generateOTK(sharedKey, transfer.payload.nonce)
 
         return { amount, otk }
-      })
+      }),
     )
 
     const MAX = this.MAX_PENDING_TRANSFERS_APPLY
@@ -133,7 +142,7 @@ export class Inputs extends Token {
     const pendingTransfersCommitments = Array(MAX).fill(0n)
     for (let i = 0; i < filteredPendingTransfers.length; i++)
       pendingTransfersCommitments[i] = BigInt(
-        filteredPendingTransfers[i].payload.commitment
+        filteredPendingTransfers[i].payload.commitment,
       )
 
     const pendingTransfersAmounts = Array(MAX).fill(0n)
@@ -144,7 +153,12 @@ export class Inputs extends Token {
     for (let i = 0; i < decryptedAmountsWithOTKs.length; i++)
       pendingTransfersOTKs[i] = decryptedAmountsWithOTKs[i].otk
 
+    const network = await this.token.runner?.provider?.getNetwork()
+    if (!network) throw new Error("Network not found")
+
     return {
+      chainId: BigInt(network.chainId),
+      contractAddress: BigInt(await this.token.getAddress()),
       cPrivateKey,
       oldAmount,
       oldNonce,
@@ -161,19 +175,19 @@ export class Inputs extends Token {
     cPrivateKey: bigint,
     pendingTransfersIndexes: number[],
     to: string,
-    transferAmount: bigint
+    transferAmount: bigint,
   ): Promise<CircuitApplyAndTransferInputs> {
     return {
       ...(await this.getCircuitInputsForApply(
         account,
         cPrivateKey,
-        pendingTransfersIndexes
+        pendingTransfersIndexes,
       )),
       ...(await this.getCircuitInputsForTransfer(
         account,
         cPrivateKey,
         to,
-        transferAmount
+        transferAmount,
       )),
     }
   }
@@ -182,7 +196,7 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     operation: bigint,
-    amount: bigint
+    amount: bigint,
   ): Promise<CircuitUpdateInputs> {
     const accountData = await this.token.getAccount(account)
 
@@ -191,10 +205,15 @@ export class Inputs extends Token {
     const oldAmount = await Token.decryptAmount(
       cPrivateKey,
       oldNonce,
-      accountData.state.eAmount
+      accountData.state.eAmount,
     )
 
+    const network = await this.token.runner?.provider?.getNetwork()
+    if (!network) throw new Error("Network not found")
+
     return {
+      chainId: BigInt(network.chainId),
+      contractAddress: BigInt(await this.token.getAddress()),
       cPrivateKey,
       oldAmount,
       oldNonce,

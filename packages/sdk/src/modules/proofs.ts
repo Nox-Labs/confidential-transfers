@@ -1,13 +1,14 @@
 import { Utils } from "./utils.js"
 import { plonk } from "snarkjs"
 import {
+  SDKOptions,
+  ProofOutput,
+  CircuitInputs,
   CircuitInitInputs,
   CircuitUpdateInputs,
   CircuitTransferInputs,
   CircuitApplyInputs,
-  ProofOutput,
-  CircuitInputs,
-  SDKOptions,
+  CircuitApplyAndTransferInputs,
 } from "./types.js"
 
 export class Proofs extends Utils {
@@ -19,60 +20,60 @@ export class Proofs extends Utils {
   }
 
   async generateInitProof(
-    circuitInputs: CircuitInitInputs
+    circuitInputs: CircuitInitInputs,
   ): Promise<ProofOutput> {
     return await this.generateProof(
       circuitInputs,
       `${this.options.paths.helpers}/init_js/init.wasm`,
-      `${this.options.paths.keys}/init/init_final.zkey`
+      `${this.options.paths.keys}/init/init_final.zkey`,
     )
   }
   async generateUpdateProof(
-    circuitInputs: CircuitUpdateInputs
+    circuitInputs: CircuitUpdateInputs,
   ): Promise<ProofOutput> {
     return await this.generateProof(
       circuitInputs,
       `${this.options.paths.helpers}/update_js/update.wasm`,
-      `${this.options.paths.keys}/update/update_final.zkey`
+      `${this.options.paths.keys}/update/update_final.zkey`,
     )
   }
   async generateTransferProof(
-    circuitInputs: CircuitTransferInputs
+    circuitInputs: CircuitTransferInputs,
   ): Promise<ProofOutput> {
     return await this.generateProof(
       circuitInputs,
       `${this.options.paths.helpers}/transfer_js/transfer.wasm`,
-      `${this.options.paths.keys}/transfer/transfer_final.zkey`
+      `${this.options.paths.keys}/transfer/transfer_final.zkey`,
     )
   }
   async generateApplyProof(
-    circuitInputs: CircuitApplyInputs
+    circuitInputs: CircuitApplyInputs,
   ): Promise<ProofOutput> {
     return await this.generateProof(
       circuitInputs,
       `${this.options.paths.helpers}/apply_js/apply.wasm`,
-      `${this.options.paths.keys}/apply/apply_final.zkey`
+      `${this.options.paths.keys}/apply/apply_final.zkey`,
     )
   }
   async generateApplyAndTransferProof(
-    circuitInputs: CircuitApplyInputs
+    circuitInputs: CircuitApplyAndTransferInputs,
   ): Promise<ProofOutput> {
     return await this.generateProof(
       circuitInputs,
       `${this.options.paths.helpers}/applyAndTransfer_js/applyAndTransfer.wasm`,
-      `${this.options.paths.keys}/applyAndTransfer/applyAndTransfer_final.zkey`
+      `${this.options.paths.keys}/applyAndTransfer/applyAndTransfer_final.zkey`,
     )
   }
 
   private async generateProof(
     circuitInputs: CircuitInputs,
     wasmPath: string,
-    zkeyPath: string
+    zkeyPath: string,
   ): Promise<ProofOutput> {
     const { proof, publicSignals } = await plonk.fullProve(
       circuitInputs,
       wasmPath,
-      zkeyPath
+      zkeyPath,
     )
 
     const calldata = await plonk.exportSolidityCallData(proof, publicSignals)

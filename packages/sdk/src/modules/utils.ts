@@ -13,7 +13,7 @@ export class Utils {
 
   static async generateCommitment(
     amount: bigint,
-    otk: bigint
+    otk: bigint,
   ): Promise<bigint> {
     return this.poseidon([amount, otk])
   }
@@ -25,13 +25,13 @@ export class Utils {
   static async generateTransferOTK(
     cPrivateKey: bigint,
     nonce: bigint,
-    cPublicKey_X: bigint,
-    cPublicKey_Y: bigint
+    cPublicKeyX: bigint,
+    cPublicKeyY: bigint,
   ): Promise<bigint> {
     const sharedKey = await this.deriveSharedKey(
       cPrivateKey,
-      cPublicKey_X,
-      cPublicKey_Y
+      cPublicKeyX,
+      cPublicKeyY,
     )
     return this.generateOTK(sharedKey, nonce)
   }
@@ -39,7 +39,7 @@ export class Utils {
   static async decryptAmount(
     key: bigint,
     nonce: bigint,
-    eAmount: bigint
+    eAmount: bigint,
   ): Promise<bigint> {
     const otk = await this.generateOTK(key, nonce)
     return await this.decipher(otk, nonce, eAmount)
@@ -47,13 +47,13 @@ export class Utils {
 
   static async deriveSharedKey(
     recipientCPrivateKey: bigint,
-    senderCPublicKey_X: bigint,
-    senderCPublicKey_Y: bigint
+    senderCPublicKeyX: bigint,
+    senderCPublicKeyY: bigint,
   ): Promise<bigint> {
     const babyJub = await buildBabyjub()
     const sharedKeyPoint = babyJub.mulPointEscalar(
-      [babyJub.F.e(senderCPublicKey_X), babyJub.F.e(senderCPublicKey_Y)],
-      recipientCPrivateKey
+      [babyJub.F.e(senderCPublicKeyX), babyJub.F.e(senderCPublicKeyY)],
+      recipientCPrivateKey,
     )
     return babyJub.F.toObject(sharedKeyPoint[0])
   }
@@ -65,54 +65,54 @@ export class Utils {
     const publicKeyPoint = babyJub.mulPointEscalar(babyJub.Base8, cPrivateKey)
     return {
       cPrivateKey,
-      cPublicKey_X: babyJub.F.toObject(publicKeyPoint[0]) as bigint,
-      cPublicKey_Y: babyJub.F.toObject(publicKeyPoint[1]) as bigint,
+      cPublicKeyX: babyJub.F.toObject(publicKeyPoint[0]) as bigint,
+      cPublicKeyY: babyJub.F.toObject(publicKeyPoint[1]) as bigint,
     }
   }
 
   static async cipher(
     key: bigint,
     nonce: bigint,
-    plaintext: bigint
+    plaintext: bigint,
   ): Promise<bigint> {
     const poseidon = await buildPoseidon()
     const keystream = poseidon([key, nonce])
     return poseidon.F.toObject(
-      poseidon.F.add(poseidon.F.e(plaintext), keystream)
+      poseidon.F.add(poseidon.F.e(plaintext), keystream),
     )
   }
 
   static async decipher(
     key: bigint,
     nonce: bigint,
-    ciphertext: bigint
+    ciphertext: bigint,
   ): Promise<bigint> {
     const poseidon = await buildPoseidon()
     const keystream = poseidon([key, nonce])
     return poseidon.F.toObject(
-      poseidon.F.sub(poseidon.F.e(ciphertext), keystream)
+      poseidon.F.sub(poseidon.F.e(ciphertext), keystream),
     )
   }
 
   static getConfidentialTransfersInstance(
     tokenAddress: string,
-    runner: ethers.ContractRunner
+    runner: ethers.ContractRunner,
   ): ConfidentialTransfers {
     return new ethers.Contract(
       tokenAddress,
       confidentialTransfersAbi,
-      runner
+      runner,
     ) as unknown as ConfidentialTransfers
   }
 
   static getConfidentialOFTInstance(
     tokenAddress: string,
-    runner: ethers.ContractRunner
+    runner: ethers.ContractRunner,
   ): ConfidentialOFT {
     return new ethers.Contract(
       tokenAddress,
       confidentialOFTAbi,
-      runner
+      runner,
     ) as unknown as ConfidentialOFT
   }
 }

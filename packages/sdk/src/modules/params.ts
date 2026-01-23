@@ -12,7 +12,7 @@ import { Auditors } from "./auditors.js"
 export class Params extends Auditors {
   getInitParams(
     output: ProofOutput,
-    stateAuditReports?: AuditReportStruct[]
+    stateAuditReports?: AuditReportStruct[],
   ): InitParamsStruct {
     return {
       stateAuditReports: stateAuditReports ?? [],
@@ -25,14 +25,14 @@ export class Params extends Auditors {
 
   getWithdrawParams(
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[]
+    stateAuditReports?: AuditReportStruct[],
   ): UpdateParamsStruct {
     return this.getUpdateParams(proofOutput, stateAuditReports)
   }
 
   getDepositParams(
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[]
+    stateAuditReports?: AuditReportStruct[],
   ): UpdateParamsStruct {
     return this.getUpdateParams(proofOutput, stateAuditReports)
   }
@@ -40,7 +40,7 @@ export class Params extends Auditors {
   getApplyParams(
     pendingTransfersIndexes: number[],
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[]
+    stateAuditReports?: AuditReportStruct[],
   ): ApplyParamsStruct {
     return {
       pendingTransfersIndexes,
@@ -56,7 +56,7 @@ export class Params extends Auditors {
     recipientAddress: string,
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
-    transferAuditReports?: AuditReportStruct[]
+    transferAuditReports?: AuditReportStruct[],
   ): TransferParamsStruct {
     return {
       recipient: recipientAddress,
@@ -74,7 +74,7 @@ export class Params extends Auditors {
     pendingTransfersIndexes: number[],
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
-    transferAuditReports?: AuditReportStruct[]
+    transferAuditReports?: AuditReportStruct[],
   ): ApplyAndTransferParamsStruct {
     return {
       recipient: recipientAddress,
@@ -90,10 +90,10 @@ export class Params extends Auditors {
 
   private getUpdateParams(
     output: ProofOutput,
-    stateAuditReports?: AuditReportStruct[]
+    stateAuditReports?: AuditReportStruct[],
   ): UpdateParamsStruct {
     return {
-      amount: output.pubSignals[3],
+      amount: output.pubSignals[5],
       stateAuditReports: stateAuditReports ?? [],
       artifacts: {
         proof: output.proof,

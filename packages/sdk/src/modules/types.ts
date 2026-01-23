@@ -5,22 +5,25 @@ export type ProofOutput = {
   pubSignals: BigNumberish[]
 }
 
-export type CircuitInitInputs = CPrivateKey
+export type CircuitInitInputs = Target & CPrivateKey
 
-export type CircuitUpdateInputs = CPrivateKey &
+export type CircuitUpdateInputs = Target &
+  CPrivateKey &
   OldState & {
     operation: bigint
     amount: bigint
   }
 
-export type CircuitTransferInputs = CPrivateKey &
+export type CircuitTransferInputs = Target &
+  CPrivateKey &
   OldState & {
     transferAmount: bigint
-    recipientPublicKey_X: bigint
-    recipientPublicKey_Y: bigint
+    recipientPublicKeyX: bigint
+    recipientPublicKeyY: bigint
   }
 
-export type CircuitApplyInputs = CPrivateKey &
+export type CircuitApplyInputs = Target &
+  CPrivateKey &
   OldState & {
     pendingTransfersAmounts: bigint[]
     pendingTransfersOTKs: bigint[]
@@ -28,7 +31,8 @@ export type CircuitApplyInputs = CPrivateKey &
     pendingTransfersCommitments: bigint[]
   }
 
-export type CircuitApplyAndTransferInputs = CircuitApplyInputs &
+export type CircuitApplyAndTransferInputs = Target &
+  CircuitApplyInputs &
   CircuitTransferInputs
 
 export type CircuitInputs =
@@ -44,6 +48,11 @@ export type SDKOptions = {
     helpers: string
     keys: string
   }
+}
+
+type Target = {
+  chainId: bigint
+  contractAddress: bigint
 }
 
 type CPrivateKey = {
