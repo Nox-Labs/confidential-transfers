@@ -5,14 +5,15 @@ import {
   WITHDRAW_AMOUNT,
   TRANSFER_AMOUNT,
 } from "./getProofFilenameForColdTest.js"
-import { baseSetupUninitializedUsers } from "../../hardhat/BaseSetup.js"
+import { baseSetupBridgeableUninitializedUsers } from "../../hardhat/BaseSetup.js"
 import * as fs from "fs"
 import * as path from "path"
 import { ProofOutput } from "../../../packages/sdk/src/modules/types.js"
 import { SDK } from "../../../packages/sdk/src/index.js"
+import { MockConfidentialTransfersBridgeable } from "../../../out/hardhat/typechain/index.js"
 
 const { user1, user2, sdk, token, getNonce } =
-  await baseSetupUninitializedUsers()
+  await baseSetupBridgeableUninitializedUsers()
 
 async function generateAndSaveProofs() {
   if (!fs.existsSync(PROOFS_DIR)) fs.mkdirSync(PROOFS_DIR, { recursive: true })
@@ -43,6 +44,37 @@ async function generateAndSaveProofs() {
 
     // --- 4.1 Apply and Transfer Proof ---
     await applyAndTransfer(false, [0])
+
+    // --- 3.1 Claim Proof ---
+    {
+      const nonce = await getNonce(user1)
+      const filename = getProofFilenameForColdTest(
+        "transfer",
+        user1.index,
+        nonce - 1n,
+        TRANSFER_AMOUNT,
+      )
+      const proof = getProofOutput(filename)
+      const pt = {
+        sender: user1.address,
+        payload: {
+          nonce: nonce,
+          commitment: proof.pubSignals[2],
+          eAmount: proof.pubSignals[3],
+        },
+        auditReports: [],
+      }
+      const recipientAccount = await token.getAccount(user2.address)
+      await (token as unknown as MockConfidentialTransfersBridgeable)
+        .connect(user2)
+        .addFailedCrossChainTransfer(
+          user2.address,
+          recipientAccount.pubKeyX,
+          recipientAccount.pubKeyY,
+          pt,
+        )
+      await claim(false, 0)
+    }
   }
 
   // --- 5 Transfer Proof ---
@@ -289,6 +321,35 @@ async function applyAndTransfer(execute: boolean, indexes: number[]) {
   if (execute)
     await token.connect(user2).cApplyAndTransfer(applyAndTransferParams)
   saveProofToFile(filename, applyAndTransferProofOutput)
+}
+
+async function claim(execute: boolean, indexToClaim: number) {
+  const filename = getProofFilenameForColdTest(
+    "claim",
+    user1.index,
+    await getNonce(user1),
+  )
+  if (isFileExists(filename) && !execute) return
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+    BigInt(user1.privateKey),
+  )
+  const claimInputs = await sdk.getCircuitInputsForClaim(
+    user1.address,
+    cPrivateKey,
+    indexToClaim,
+  )
+  // claimInputs.pendingTransferAmount = TRANSFER_AMOUNT
+  console.log("claimInputs", claimInputs)
+  let claimProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    claimProofOutput = getProofOutput(filename)
+  } else {
+    claimProofOutput = await sdk.generateClaimProof(claimInputs)
+  }
+  const claimParams = sdk.getClaimParams(indexToClaim, claimProofOutput)
+  console.log("claimParams", claimParams)
+  if (execute) await token.connect(user1).cClaim(claimParams)
+  saveProofToFile(filename, claimProofOutput)
 }
 
 function isFileExists(filename: string) {

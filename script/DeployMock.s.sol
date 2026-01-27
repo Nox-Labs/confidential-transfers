@@ -8,6 +8,7 @@ import {MockConfidentialOFT} from "../test/utils/mock/MockConfidentialOFT.sol";
 
 import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../src/verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "../src/verifiers/ApplyPlonkVerifier.sol";
+import {PlonkVerifier as ClaimPlonkVerifier} from "../src/verifiers/ClaimPlonkVerifier.sol";
 import {PlonkVerifier as InitPlonkVerifier} from "../src/verifiers/InitPlonkVerifier.sol";
 import {PlonkVerifier as TransferPlonkVerifier} from "../src/verifiers/TransferPlonkVerifier.sol";
 import {PlonkVerifier as UpdatePlonkVerifier} from "../src/verifiers/UpdatePlonkVerifier.sol";
@@ -35,6 +36,7 @@ contract DeployMock is Script {
         UpdatePlonkVerifier updateVerifier = new UpdatePlonkVerifier();
         TransferPlonkVerifier transferVerifier = new TransferPlonkVerifier();
         ApplyAndTransferPlonkVerifier applyAndTransferVerifier = new ApplyAndTransferPlonkVerifier();
+        ClaimPlonkVerifier claimVerifier = new ClaimPlonkVerifier();
         MockConfidentialOFT mockConfidentialOFT = new MockConfidentialOFT(
             "Test Confidential OFT",
             "cOFT",
@@ -45,7 +47,8 @@ contract DeployMock is Script {
             applyVerifier,
             updateVerifier,
             transferVerifier,
-            applyAndTransferVerifier
+            applyAndTransferVerifier,
+            claimVerifier
         );
         mockConfidentialOFT.mint(msg.sender, 1e22);
         console.log("MockConfidentialOFT deployed to:", address(mockConfidentialOFT));

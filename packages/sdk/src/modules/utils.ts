@@ -4,6 +4,8 @@ import { ConfidentialTransfers } from "../artifacts/typechain/src/ConfidentialTr
 import { confidentialTransfersAbi } from "../artifacts/abi/ConfidentialTransfers"
 import { ConfidentialOFT } from "../artifacts/typechain/src/ConfidentialOFT"
 import { confidentialOFTAbi } from "../artifacts/abi/ConfidentialOFT"
+import { ConfidentialTransfersBridgeable } from "../artifacts/typechain/src/ConfidentialTransfersBridgeable"
+import { confidentialTransfersBridgeableAbi } from "../artifacts/abi/ConfidentialTransfersBridgeable"
 
 export class Utils {
   static async poseidon(inputs: bigint[]): Promise<bigint> {
@@ -18,42 +20,37 @@ export class Utils {
     return this.poseidon([amount, otk])
   }
 
-  static async generateOTK(key: bigint, nonce: bigint): Promise<bigint> {
-    return this.poseidon([key, nonce])
-  }
-
-  static async generateTransferOTK(
-    cPrivateKey: bigint,
+  static async generateOTK(
+    key: bigint,
     nonce: bigint,
-    cPublicKeyX: bigint,
-    cPublicKeyY: bigint,
+    // chainId: bigint,
+    // contractAddress: bigint,
   ): Promise<bigint> {
-    const sharedKey = await this.deriveSharedKey(
-      cPrivateKey,
-      cPublicKeyX,
-      cPublicKeyY,
-    )
-    return this.generateOTK(sharedKey, nonce)
+    return this.poseidon([key, nonce])
+    // return this.poseidon([key, nonce, chainId, contractAddress])
   }
 
   static async decryptAmount(
     key: bigint,
     nonce: bigint,
     eAmount: bigint,
+    // chainId: bigint,
+    // contractAddress: bigint,
   ): Promise<bigint> {
     const otk = await this.generateOTK(key, nonce)
+    // const otk = await this.generateOTK(key, nonce, chainId, contractAddress)
     return await this.decipher(otk, nonce, eAmount)
   }
 
   static async deriveSharedKey(
-    recipientCPrivateKey: bigint,
-    senderCPublicKeyX: bigint,
-    senderCPublicKeyY: bigint,
+    cPrivateKey: bigint,
+    cPublicKeyX: bigint,
+    cPublicKeyY: bigint,
   ): Promise<bigint> {
     const babyJub = await buildBabyjub()
     const sharedKeyPoint = babyJub.mulPointEscalar(
-      [babyJub.F.e(senderCPublicKeyX), babyJub.F.e(senderCPublicKeyY)],
-      recipientCPrivateKey,
+      [babyJub.F.e(cPublicKeyX), babyJub.F.e(cPublicKeyY)],
+      cPrivateKey,
     )
     return babyJub.F.toObject(sharedKeyPoint[0])
   }
@@ -103,6 +100,17 @@ export class Utils {
       confidentialTransfersAbi,
       runner,
     ) as unknown as ConfidentialTransfers
+  }
+
+  static getConfidentialTransfersBridgeableInstance(
+    tokenAddress: string,
+    runner: ethers.ContractRunner,
+  ): ConfidentialTransfersBridgeable {
+    return new ethers.Contract(
+      tokenAddress,
+      confidentialTransfersBridgeableAbi,
+      runner,
+    ) as unknown as ConfidentialTransfersBridgeable
   }
 
   static getConfidentialOFTInstance(

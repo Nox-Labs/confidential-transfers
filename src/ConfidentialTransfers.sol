@@ -81,6 +81,9 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
     {
         Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+
+        if (account.state.commitment != 0) revert AccountAlreadyInitialized();
+
         account.state = _init(params);
         account.pubKeyX = params.artifacts.outputs[0];
         account.pubKeyY = params.artifacts.outputs[1];
@@ -157,7 +160,13 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
             .push(PendingTransfer(msg.sender, transferPackage, params.transferAuditReports));
 
         emit CTransferred(
-            msg.sender, params.recipient, newState, transferPackage, account.auditReports, params.transferAuditReports
+            msg.sender,
+            params.recipient,
+            newState,
+            transferPackage,
+            account.auditReports,
+            params.transferAuditReports,
+            params.extraData
         );
     }
 
@@ -187,7 +196,8 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
             newState,
             pendingTransferPayload,
             params.stateAuditReports,
-            params.transferAuditReports
+            params.transferAuditReports,
+            params.extraData
         );
     }
 
@@ -210,9 +220,6 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         returns (Payload memory newState)
     {
         ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
-        Account storage account = $.accounts[msg.sender];
-
-        if (account.state.commitment != 0) revert AccountAlreadyInitialized();
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [

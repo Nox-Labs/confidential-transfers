@@ -1,12 +1,16 @@
 import { ConfidentialTransfers } from "../artifacts/typechain/src/ConfidentialTransfers.js"
 import { ConfidentialOFT } from "../artifacts/typechain/src/ConfidentialOFT.js"
+import { ConfidentialTransfersBridgeable } from "../artifacts/typechain/src/ConfidentialTransfersBridgeable.js"
 import { Proofs } from "./proofs.js"
 import { SDKOptions } from "./types.js"
 
 export class Token extends Proofs {
   constructor(
-    readonly token: ConfidentialTransfers | ConfidentialOFT,
-    options: SDKOptions
+    readonly token:
+      | ConfidentialTransfers
+      | ConfidentialTransfersBridgeable
+      | ConfidentialOFT,
+    options: SDKOptions,
   ) {
     super(options)
   }
@@ -18,7 +22,7 @@ export class Token extends Proofs {
     return await Proofs.decryptAmount(
       cPrivateKey,
       accountData.state.nonce,
-      BigInt(accountData.state.eAmount)
+      BigInt(accountData.state.eAmount),
     )
   }
 }

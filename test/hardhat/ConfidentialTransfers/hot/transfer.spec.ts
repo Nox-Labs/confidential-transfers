@@ -13,15 +13,15 @@ describe("ConfidentialTransfers", function () {
         const transferAmount = conn.ethers.parseEther("10")
 
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user1.privateKey)
+          BigInt(user1.privateKey),
         )
         const proofOutput = await sdk.generateTransferProof(
           await sdk.getCircuitInputsForTransfer(
             user1.address,
             cPrivateKey,
             user2.address,
-            transferAmount
-          )
+            transferAmount,
+          ),
         )
         const params = sdk.getTransferParams(user2.address, proofOutput)
 

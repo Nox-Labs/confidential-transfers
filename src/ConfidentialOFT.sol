@@ -6,10 +6,9 @@ import {ConfidentialTransfersBridgeable} from "./ConfidentialTransfersBridgeable
 import {CSendParams, IConfidentialOFT} from "./interface/IConfidentialOFT.sol";
 import {Payload, PendingTransfer} from "./interface/IConfidentialTransfers.sol";
 
-import {ConfidentialOFTMsgCodec} from "./lib/ConfidentialOFTMsgCodec.sol";
-
 import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "./verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "./verifiers/ApplyPlonkVerifier.sol";
+import {PlonkVerifier as ClaimPlonkVerifier} from "./verifiers/ClaimPlonkVerifier.sol";
 import {PlonkVerifier as InitPlonkVerifier} from "./verifiers/InitPlonkVerifier.sol";
 import {PlonkVerifier as TransferPlonkVerifier} from "./verifiers/TransferPlonkVerifier.sol";
 import {PlonkVerifier as UpdatePlonkVerifier} from "./verifiers/UpdatePlonkVerifier.sol";
@@ -35,7 +34,8 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         ApplyPlonkVerifier _applyVerifier,
         UpdatePlonkVerifier _updateVerifier,
         TransferPlonkVerifier _transferVerifier,
-        ApplyAndTransferPlonkVerifier _applyAndTransferVerifier
+        ApplyAndTransferPlonkVerifier _applyAndTransferVerifier,
+        ClaimPlonkVerifier _claimVerifier
     ) OFT(_tokenName, _tokenSymbol, _lzEndpoint, _delegate) Ownable(_delegate) initializer {
         __ConfidentialTransfers_init(
             _maxPendingTransfers,
@@ -45,6 +45,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
             _transferVerifier,
             _applyAndTransferVerifier
         );
+        __ConfidentialTransfersBridgeable_init(_claimVerifier);
     }
 
     function _cBurn(uint256 amount) internal override {
@@ -69,7 +70,10 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         PendingTransfer memory pendingTransfer =
             PendingTransfer(msg.sender, pendingTransferPackage, params.transferParams.transferAuditReports);
 
-        (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
+        bytes memory cMsg =
+            _encodeCMessage(params.transferParams.recipient, pendingTransfer, params.transferParams.extraData);
+
+        (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, cMsg);
 
         msgFee = _quote(params.dstEid, message, options, false);
     }
@@ -82,22 +86,11 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         checkRequiredAuditor(msg.sender, params.transferParams.transferAuditReports)
         returns (MessagingReceipt memory msgReceipt)
     {
-        (Payload memory newState, PendingTransfer memory pendingTransfer) = _cSend(params.transferParams);
+        (,, bytes memory cMsg) = _cSend(params.transferParams);
 
-        (bytes memory message, bytes memory options) = _buildMsgAndOptions(params, pendingTransfer);
+        (bytes memory lzMsg, bytes memory options) = _buildMsgAndOptions(params, cMsg);
 
-        msgReceipt = _lzSend(params.dstEid, message, options, fee, refundAddress);
-
-        emit ConfidentialOFTSent(
-            msgReceipt.guid,
-            params.dstEid,
-            pendingTransfer.sender,
-            params.transferParams.recipient,
-            newState,
-            pendingTransfer.payload,
-            params.transferParams.stateAuditReports,
-            params.transferParams.transferAuditReports
-        );
+        msgReceipt = _lzSend(params.dstEid, lzMsg, options, fee, refundAddress);
     }
 
     function _buildMsgAndOptions(SendParam calldata _sendParam, uint256 _amountLD)
@@ -116,18 +109,16 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
     }
 
-    function _buildMsgAndOptions(CSendParams calldata params, PendingTransfer memory pendingTransfer)
+    function _buildMsgAndOptions(CSendParams calldata params, bytes memory cMsg)
         internal
         view
-        returns (bytes memory message, bytes memory options)
+        returns (bytes memory typedMessage, bytes memory options)
     {
-        bytes memory msgPayload = ConfidentialOFTMsgCodec.encode(params.transferParams.recipient, pendingTransfer);
-
-        message = abi.encode(uint8(1), msgPayload);
+        typedMessage = abi.encode(uint8(1), cMsg);
 
         options = combineOptions(params.dstEid, SEND, params.extraOptions);
 
-        if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
+        if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(typedMessage, options);
     }
 
     function _lzReceive(
@@ -137,18 +128,13 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         address executor,
         bytes calldata extraData
     ) internal virtual override {
-        (uint8 msgType, bytes memory msgPayload) = abi.decode(message, (uint8, bytes));
-        uint256 len = msgPayload.length;
+        (uint8 msgType, bytes memory msgWithBridgeType) = abi.decode(message, (uint8, bytes));
+        uint256 len = msgWithBridgeType.length;
         if (msgType == 0) {
-            // we use _message slice because _lzReceive expect that _message should be in calldata
-            // but msgPayload is in memory
+            // we use _message slice because _lzReceive expect that _message should be in calldata but msgPayload is in memory
             super._lzReceive(origin, guid, message[96:96 + len], executor, extraData);
         } else if (msgType == 1) {
-            address toAddress = ConfidentialOFTMsgCodec.sendTo(message[96:96 + len]);
-            PendingTransfer memory pendingTransfer = ConfidentialOFTMsgCodec.pendingTransfer(message[96:96 + len]);
-            _cReceive(toAddress, pendingTransfer);
-
-            emit ConfidentialOFTReceived(guid, origin.srcEid, toAddress, pendingTransfer);
+            _cReceive(message[96:96 + len]);
         } else {
             revert InvalidMessageType();
         }

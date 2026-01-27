@@ -25,12 +25,12 @@ describe("ConfidentialTransfers", function () {
         const pendingTransfersIndexes = [0]
 
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user2.privateKey)
+          BigInt(user2.privateKey),
         )
         const applyInputs = await sdk.getCircuitInputsForApply(
           user2.address,
           cPrivateKey,
-          pendingTransfersIndexes
+          pendingTransfersIndexes,
         )
 
         const proofOutput = await sdk.generateApplyProof(applyInputs)

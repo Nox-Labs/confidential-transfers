@@ -2,7 +2,7 @@ import { baseSetup, conn } from "../../BaseSetup.js"
 import { expect } from "chai"
 
 describe("ConfidentialTransfers", function () {
-  describe("ConfidentialTransfers/cold", function () {
+  describe("Cold:ConfidentialTransfers", function () {
     describe("Cold:ConfidentialTransfers:cTransfer()", function () {
       let f: Awaited<ReturnType<typeof baseSetup>>
 
@@ -41,7 +41,7 @@ describe("ConfidentialTransfers", function () {
 
         it("Should update user on-chain confidential balance", async function () {
           expect(
-            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey)
+            await f.sdk.сBalanceOf(f.user1.address, f.user1CPrivateKey),
           ).to.equal(f.DEPOSIT_AMOUNT - f.TRANSFER_AMOUNT)
         })
 
@@ -56,45 +56,45 @@ describe("ConfidentialTransfers", function () {
             "transfer",
             f.user1.index,
             nonce,
-            f.TRANSFER_AMOUNT
+            f.TRANSFER_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
 
           const stateAuditorReports = await f.sdk.createStateAuditReport(
             f.user1CPrivateKey,
             nonce,
-            [f.user2.address]
+            [f.user2.address],
           )
           const transferAuditorReports = await f.sdk.createTransferAuditReport(
             f.user1CPrivateKey,
             nonce,
             f.user2.address,
-            [f.user2.address]
+            [f.user2.address],
           )
           const params = f.sdk.getTransferParams(
             f.user2.address,
             proof,
             stateAuditorReports,
-            transferAuditorReports
+            transferAuditorReports,
           )
           await f.token.connect(f.user1).cTransfer(params)
           const accountAfter = await f.token.getAccount(f.user1.address)
           expect(accountAfter.auditReports.length).to.equal(1)
           expect(accountAfter.auditReports[0].auditor).to.equal(f.user2.address)
           expect(accountAfter.auditReports[0].eOTK).to.equal(
-            stateAuditorReports[0].eOTK
+            stateAuditorReports[0].eOTK,
           )
           const recipientAccountPendingTransfers = (
             await f.token.getAccount(f.user2.address)
           ).pendingTransfers
           expect(
-            recipientAccountPendingTransfers[1].auditReports.length
+            recipientAccountPendingTransfers[1].auditReports.length,
           ).to.equal(1)
           expect(
-            recipientAccountPendingTransfers[1].auditReports[0].auditor
+            recipientAccountPendingTransfers[1].auditReports[0].auditor,
           ).to.equal(f.user2.address)
           expect(
-            recipientAccountPendingTransfers[1].auditReports[0].eOTK
+            recipientAccountPendingTransfers[1].auditReports[0].eOTK,
           ).to.equal(transferAuditorReports[0].eOTK)
         })
 
@@ -103,13 +103,13 @@ describe("ConfidentialTransfers", function () {
             "transfer",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.TRANSFER_AMOUNT
+            f.TRANSFER_AMOUNT,
           )
           const proof = f.getProofOutput(proofFilename)
           const params = f.sdk.getTransferParams(f.user2.address, proof)
           await expect(f.token.connect(f.user1).cTransfer(params)).to.emit(
             f.token,
-            "CTransferred"
+            "CTransferred",
           )
         })
       })
@@ -120,13 +120,13 @@ describe("ConfidentialTransfers", function () {
             "transfer",
             f.user1.index,
             await f.getNonce(f.user1),
-            f.TRANSFER_AMOUNT
+            f.TRANSFER_AMOUNT,
           )
           const proof = f.getProofOutput(filename)
           proof.pubSignals[0] = BigInt(proof.pubSignals[0]) + 1n
           const params = f.sdk.getTransferParams(f.user2.address, proof)
           await expect(
-            f.token.connect(f.user1).cTransfer(params)
+            f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "ProofVerificationFailed")
         })
 
@@ -134,10 +134,10 @@ describe("ConfidentialTransfers", function () {
           const proof = f.MOCK_PROOF_OUTPUT
           const params = f.sdk.getTransferParams(
             f.userUninitialized.address,
-            proof
+            proof,
           )
           await expect(
-            f.token.connect(f.userUninitialized).cTransfer(params)
+            f.token.connect(f.userUninitialized).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "AccountNotInitialized")
         })
 
@@ -149,33 +149,33 @@ describe("ConfidentialTransfers", function () {
 
           const params = f.sdk.getTransferParams(
             f.user2.address,
-            f.MOCK_PROOF_OUTPUT
+            f.MOCK_PROOF_OUTPUT,
           )
 
           await expect(
-            f.token.connect(f.user1).cTransfer(params)
+            f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "MaxPendingTransfersReached")
         })
 
         it("Should revert if length in params.output mismatch", async function () {
           const params = f.sdk.getTransferParams(
             f.user2.address,
-            f.MOCK_PROOF_OUTPUT
+            f.MOCK_PROOF_OUTPUT,
           )
           params.artifacts.outputs.pop()
           await expect(
-            f.token.connect(f.user1).cTransfer(params)
+            f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
         it("Should revert if proof length mismatch", async function () {
           const params = f.sdk.getTransferParams(
             f.user2.address,
-            f.MOCK_PROOF_OUTPUT
+            f.MOCK_PROOF_OUTPUT,
           )
           params.artifacts.proof.pop()
           await expect(
-            f.token.connect(f.user1).cTransfer(params)
+            f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
@@ -183,10 +183,10 @@ describe("ConfidentialTransfers", function () {
           await f.token.connect(f.user1).addRequiredAuditor(f.user2.address)
           const params = f.sdk.getTransferParams(
             f.user2.address,
-            f.MOCK_PROOF_OUTPUT
+            f.MOCK_PROOF_OUTPUT,
           )
           await expect(
-            f.token.connect(f.user1).cTransfer(params)
+            f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "NotFound")
         })
       })

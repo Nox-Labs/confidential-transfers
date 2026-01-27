@@ -9,6 +9,7 @@ import {
   CircuitTransferInputs,
   CircuitApplyInputs,
   CircuitApplyAndTransferInputs,
+  CircuitClaimInputs,
 } from "./types.js"
 
 export class Proofs extends Utils {
@@ -62,6 +63,15 @@ export class Proofs extends Utils {
       circuitInputs,
       `${this.options.paths.helpers}/applyAndTransfer_js/applyAndTransfer.wasm`,
       `${this.options.paths.keys}/applyAndTransfer/applyAndTransfer_final.zkey`,
+    )
+  }
+  async generateClaimProof(
+    circuitInputs: CircuitClaimInputs,
+  ): Promise<ProofOutput> {
+    return await this.generateProof(
+      circuitInputs,
+      `${this.options.paths.helpers}/claim_js/claim.wasm`,
+      `${this.options.paths.keys}/claim/claim_final.zkey`,
     )
   }
 

@@ -45,7 +45,7 @@ ignore = ["src/verifiers/*.sol"] # list of files to ignore separated by commas
 lint_on_build = false
 severity = ["high", "medium", "low", "info", "gas", "codesize"]
 exclude_lints = ["named-struct-fields", "unaliased-plain-import", "unwrapped-modifier-logic", "unsafe-cheatcode", "mixed-case-variable", "pascal-case-struct", "mixed-case-function"] # all rules https://protofire.github.io/solhint/docs/rules.html
-ignore = ["src/verifiers/*.sol"] # list of files to ignore separated by commas
+ignore = ["src/verifiers/*.sol", "test/foundry/BaseSetup.t.sol"] # list of files to ignore separated by commas
 
 [doc]
 out = "docs/generated"

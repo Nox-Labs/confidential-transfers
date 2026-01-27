@@ -272,7 +272,7 @@ describe("ConfidentialTransfers", function () {
             )
             const proof = f.getProofOutput(proofFilename)
             const params = f.sdk.getApplyParams([0], proof)
-            await expect(f.token.connect(f.user2).cApply(params)).to.emit(
+            expect(await f.token.connect(f.user2).cApply(params)).to.emit(
               f.token,
               "CApplied",
             )

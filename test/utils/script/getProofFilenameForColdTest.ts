@@ -13,6 +13,7 @@ export type Operation =
   | "apply"
   | "withdraw"
   | "applyAndTransfer"
+  | "claim"
 
 export const getProofFilenameForColdTest = (
   operation: Operation,

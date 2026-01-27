@@ -14,14 +14,14 @@ describe("ConfidentialTransfers", function () {
         const depositAmount = conn.ethers.parseEther("1")
 
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user1.privateKey)
+          BigInt(user1.privateKey),
         )
         const proofOutput = await sdk.generateUpdateProof(
           await sdk.getCircuitInputsForDeposit(
             user1.address,
             cPrivateKey,
-            depositAmount
-          )
+            depositAmount,
+          ),
         )
         const params = sdk.getDepositParams(proofOutput)
 
@@ -39,10 +39,10 @@ describe("ConfidentialTransfers", function () {
         expect(account.state.eAmount).to.equal(newEncryptedAmount)
         expect(decryptedAmount).to.equal(depositAmount)
         expect(await token.balanceOf(user1.address)).to.equal(
-          INITIAL_BALANCE - depositAmount
+          INITIAL_BALANCE - depositAmount,
         )
         expect(await token.balanceOf(await token.getAddress())).to.equal(
-          depositAmount
+          depositAmount,
         )
       })
     })

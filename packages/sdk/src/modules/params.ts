@@ -6,6 +6,7 @@ import {
   TransferParamsStruct,
   UpdateParamsStruct,
 } from "../artifacts/typechain/src/ConfidentialTransfers.js"
+import { ClaimParamsStruct } from "../artifacts/typechain/src/ConfidentialTransfersBridgeable.js"
 import { ProofOutput } from "./types.js"
 import { Auditors } from "./auditors.js"
 
@@ -57,11 +58,13 @@ export class Params extends Auditors {
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
     transferAuditReports?: AuditReportStruct[],
+    extraData?: string,
   ): TransferParamsStruct {
     return {
       recipient: recipientAddress,
       stateAuditReports: stateAuditReports ?? [],
       transferAuditReports: transferAuditReports ?? [],
+      extraData: extraData ?? "0x",
       artifacts: {
         proof: proofOutput.proof,
         outputs: proofOutput.pubSignals.slice(0, 4),
@@ -75,16 +78,33 @@ export class Params extends Auditors {
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
     transferAuditReports?: AuditReportStruct[],
+    extraData?: string,
   ): ApplyAndTransferParamsStruct {
     return {
       recipient: recipientAddress,
       pendingTransfersIndexes,
       stateAuditReports: stateAuditReports ?? [],
       transferAuditReports: transferAuditReports ?? [],
+      extraData: extraData ?? "0x",
       artifacts: {
         proof: proofOutput.proof,
         outputs: proofOutput.pubSignals.slice(0, 4),
       },
+    }
+  }
+
+  getClaimParams(
+    indexToClaim: number,
+    proofOutput: ProofOutput,
+    stateAuditReports?: AuditReportStruct[],
+  ): ClaimParamsStruct {
+    return {
+      indexToClaim,
+      artifacts: {
+        proof: proofOutput.proof,
+        outputs: proofOutput.pubSignals.slice(0, 2),
+      },
+      stateAuditReports: stateAuditReports ?? [],
     }
   }
 

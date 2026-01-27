@@ -10,8 +10,16 @@ import {
   type Operation,
 } from "../utils/script/getProofFilenameForColdTest.js"
 import { BaseWallet } from "ethers"
-import { SDK, type ProofOutput } from "@noxlabs/confidential-transfers-sdk"
-import type { MockERC20Bridgeable } from "../../out/hardhat/typechain/index.js"
+import {
+  SDK,
+  type ConfidentialTransfers,
+  type ConfidentialTransfersBridgeable,
+  type ConfidentialOFT,
+  type ProofOutput,
+} from "@noxlabs/confidential-transfers-sdk"
+import * as circomlibjs from "circomlibjs"
+import { buildPoseidon } from "circomlibjs"
+import assert from "assert"
 
 export const conn = await hre.network.connect()
 
@@ -22,7 +30,10 @@ const pk = {
 }
 
 async function setup(
-  target: "MockERC20" | "MockERC20Bridgeable",
+  target:
+    | "ConfidentialTransfers"
+    | "ConfidentialTransfersBridgeable"
+    | "ConfidentialOFT",
   isMockVerifier: boolean,
 ) {
   const { ethers, networkHelpers } = conn
@@ -43,14 +54,54 @@ async function setup(
   const uv = await ethers.deployContract(getVerifierPath("Update"))
   const tv = await ethers.deployContract(getVerifierPath("Transfer"))
   const anv = await ethers.deployContract(getVerifierPath("ApplyAndTransfer"))
-  const token = (await ethers.deployContract(target, [
+  const cv = await ethers.deployContract(getVerifierPath("Claim"))
+  const params = [
     4,
     await iv.getAddress(),
     await av.getAddress(),
     await uv.getAddress(),
     await tv.getAddress(),
     await anv.getAddress(),
-  ])) as unknown as MockERC20Bridgeable
+  ]
+
+  if (target !== "ConfidentialTransfers") params.push(await cv.getAddress())
+
+  const token = (await ethers.deployContract(
+    `Mock${target}`,
+    params,
+  )) as unknown as ConfidentialOFT &
+    ConfidentialTransfersBridgeable &
+    ConfidentialTransfers & {
+      mint: (address: string, amount: bigint) => Promise<void>
+      transfer: (to: string, amount: bigint) => Promise<boolean>
+      transferFrom: (
+        from: string,
+        to: string,
+        amount: bigint,
+      ) => Promise<boolean>
+      name: () => Promise<string>
+      symbol: () => Promise<string>
+      decimals: () => Promise<number>
+      totalSupply: () => Promise<bigint>
+      balanceOf: (account: string) => Promise<bigint>
+      approve: (spender: string, amount: bigint) => Promise<boolean>
+      allowance: (owner: string, spender: string) => Promise<bigint>
+    }
+
+  const C2Code = circomlibjs.poseidonContract.createCode(2)
+  const PoseidonFactory = new ethers.ContractFactory(
+    circomlibjs.poseidonContract.generateABI(2),
+    C2Code,
+    await ethers.provider.getSigner(),
+  )
+
+  const poseidonCircomLib = await buildPoseidon()
+
+  const poseidonContract = await PoseidonFactory.deploy()
+
+  const res = await (poseidonContract as any)["poseidon(uint256[2])"]([1, 2])
+  const res2 = poseidonCircomLib([1, 2])
+  assert.equal(res.toString(), poseidonCircomLib.F.toString(res2))
 
   const userUninitialized = Object.assign(
     new ethers.Wallet(pk.user0, ethers.provider),
@@ -80,6 +131,7 @@ async function setup(
   await token.mint(user2.address, INITIAL_BALANCE)
 
   const sdk = new SDK(await token.getAddress(), ethers.provider as any, {
+    type: target,
     paths: {
       helpers: fs.realpathSync("packages/sdk/src/artifacts/proofs-helpers"),
       keys: fs.realpathSync("out/zk/keys"),
@@ -274,6 +326,36 @@ async function setup(
     return proofOutput
   }
 
+  const cClaim = async (
+    _type: "hot" | "cold",
+    user: typeof user1,
+    indexToClaim: number,
+  ): Promise<ProofOutput> => {
+    let proofOutput: ProofOutput
+    if (_type === "hot") {
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey),
+      )
+      proofOutput = await sdk.generateClaimProof(
+        await sdk.getCircuitInputsForClaim(
+          user.address,
+          cPrivateKey,
+          indexToClaim,
+        ),
+      )
+    } else {
+      const filename = getProofFilenameForColdTest(
+        "claim",
+        user.index,
+        await getNonce(user),
+      )
+      proofOutput = getProofOutput(filename)
+    }
+    const params = sdk.getClaimParams(indexToClaim, proofOutput)
+    await token.connect(user).cClaim(params)
+    return proofOutput
+  }
+
   const getNonce = async (user: BaseWallet) => {
     return (await token.getAccount(user.address)).state.nonce
   }
@@ -337,6 +419,7 @@ async function setup(
     cTransfer,
     cApply,
     cApplyAndTransfer,
+    cClaim,
     getFilename,
     getNonce,
     getProofOutput,
@@ -360,17 +443,17 @@ async function initialize(s: Awaited<ReturnType<typeof setup>>) {
 }
 
 export async function baseSetupUninitializedUsers() {
-  return setup("MockERC20", false)
+  return setup("ConfidentialTransfers", false)
 }
 
 export async function baseSetup() {
-  return initialize(await setup("MockERC20", false))
+  return initialize(await setup("ConfidentialTransfers", false))
 }
 
-export async function baseSetupUninitializedUsersBridgeable() {
-  return setup("MockERC20Bridgeable", true)
+export async function baseSetupBridgeableUninitializedUsers() {
+  return setup("ConfidentialTransfersBridgeable", false)
 }
 
 export async function baseSetupBridgeable() {
-  return initialize(await setup("MockERC20Bridgeable", true))
+  return initialize(await setup("ConfidentialTransfersBridgeable", false))
 }

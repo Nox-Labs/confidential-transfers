@@ -16,14 +16,14 @@ describe("ConfidentialTransfers", function () {
 
         const withdrawAmount = conn.ethers.parseEther("1")
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user1.privateKey)
+          BigInt(user1.privateKey),
         )
         const proofOutput = await sdk.generateUpdateProof(
           await sdk.getCircuitInputsForWithdraw(
             user1.address,
             cPrivateKey,
-            withdrawAmount
-          )
+            withdrawAmount,
+          ),
         )
         const params = sdk.getWithdrawParams(proofOutput)
         await token.connect(user1).cWithdraw(params)
@@ -40,10 +40,10 @@ describe("ConfidentialTransfers", function () {
         expect(account.state.eAmount).to.equal(newEncryptedAmount)
         expect(decryptedAmount).to.equal(depositAmount - withdrawAmount)
         expect(await token.balanceOf(user1.address)).to.equal(
-          INITIAL_BALANCE - depositAmount + withdrawAmount
+          INITIAL_BALANCE - depositAmount + withdrawAmount,
         )
         expect(await token.balanceOf(await token.getAddress())).to.equal(
-          depositAmount - withdrawAmount
+          depositAmount - withdrawAmount,
         )
       })
     })

@@ -5,6 +5,21 @@ export type ProofOutput = {
   pubSignals: BigNumberish[]
 }
 
+type Target = {
+  chainId: bigint
+  contractAddress: bigint
+}
+
+type CPrivateKey = {
+  cPrivateKey: bigint
+}
+
+type OldState = {
+  oldAmount: bigint
+  oldNonce: bigint
+  oldCommitment: bigint
+}
+
 export type CircuitInitInputs = Target & CPrivateKey
 
 export type CircuitUpdateInputs = Target &
@@ -31,9 +46,18 @@ export type CircuitApplyInputs = Target &
     pendingTransfersCommitments: bigint[]
   }
 
-export type CircuitApplyAndTransferInputs = Target &
-  CircuitApplyInputs &
+export type CircuitApplyAndTransferInputs = CircuitApplyInputs &
   CircuitTransferInputs
+
+export type CircuitClaimInputs = Target &
+  CPrivateKey &
+  OldState & {
+    recipientPublicKeyX: bigint
+    recipientPublicKeyY: bigint
+    pendingTransferNonce: bigint
+    pendingTransferAmount: bigint
+    pendingTransferCommitment: bigint
+  }
 
 export type CircuitInputs =
   | CircuitInitInputs
@@ -41,26 +65,15 @@ export type CircuitInputs =
   | CircuitTransferInputs
   | CircuitApplyInputs
   | CircuitApplyAndTransferInputs
+  | CircuitClaimInputs
 
 export type SDKOptions = {
-  isOFT?: boolean
+  type?:
+    | "ConfidentialTransfers"
+    | "ConfidentialTransfersBridgeable"
+    | "ConfidentialOFT"
   paths: {
     helpers: string
     keys: string
   }
-}
-
-type Target = {
-  chainId: bigint
-  contractAddress: bigint
-}
-
-type CPrivateKey = {
-  cPrivateKey: bigint
-}
-
-type OldState = {
-  oldAmount: bigint
-  oldNonce: bigint
-  oldCommitment: bigint
 }

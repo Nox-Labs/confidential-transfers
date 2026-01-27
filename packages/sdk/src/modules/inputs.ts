@@ -4,8 +4,10 @@ import {
   CircuitTransferInputs,
   CircuitApplyInputs,
   CircuitApplyAndTransferInputs,
+  CircuitClaimInputs,
 } from "./types.js"
 import { Token } from "./token.js"
+import type { ConfidentialTransfersBridgeable } from "../artifacts/typechain/src/ConfidentialTransfersBridgeable.js"
 
 export class Inputs extends Token {
   MAX_PENDING_TRANSFERS_APPLY = 10
@@ -18,11 +20,8 @@ export class Inputs extends Token {
   async getCircuitInputsForInit(
     cPrivateKey: bigint,
   ): Promise<CircuitInitInputs> {
-    const network = await this.token.runner?.provider?.getNetwork()
-    if (!network) throw new Error("Network not found")
     return {
-      chainId: BigInt(network.chainId),
-      contractAddress: BigInt(await this.token.getAddress()),
+      ...(await this.getTarget()),
       cPrivateKey,
     }
   }
@@ -71,12 +70,8 @@ export class Inputs extends Token {
 
     const { pubKeyX, pubKeyY } = await this.token.getAccount(to)
 
-    const network = await this.token.runner?.provider?.getNetwork()
-    if (!network) throw new Error("Network not found")
-
     return {
-      chainId: BigInt(network.chainId),
-      contractAddress: BigInt(await this.token.getAddress()),
+      ...(await this.getTarget()),
       cPrivateKey,
       oldAmount,
       oldNonce,
@@ -153,12 +148,8 @@ export class Inputs extends Token {
     for (let i = 0; i < decryptedAmountsWithOTKs.length; i++)
       pendingTransfersOTKs[i] = decryptedAmountsWithOTKs[i].otk
 
-    const network = await this.token.runner?.provider?.getNetwork()
-    if (!network) throw new Error("Network not found")
-
     return {
-      chainId: BigInt(network.chainId),
-      contractAddress: BigInt(await this.token.getAddress()),
+      ...(await this.getTarget()),
       cPrivateKey,
       oldAmount,
       oldNonce,
@@ -192,6 +183,57 @@ export class Inputs extends Token {
     }
   }
 
+  async getCircuitInputsForClaim(
+    account: string,
+    cPrivateKey: bigint,
+    indexToClaim: number,
+  ): Promise<CircuitClaimInputs> {
+    const failedCrossChainTransfers = await (
+      this.token as ConfidentialTransfersBridgeable
+    ).getFailedCrossChainTransfers(account)
+
+    if (failedCrossChainTransfers.length <= indexToClaim)
+      throw new Error("No failed cross-chain transfers found")
+
+    const transferToClaim = failedCrossChainTransfers[indexToClaim]
+
+    const accountData = await this.token.getAccount(account)
+
+    const oldNonce = accountData.state.nonce
+
+    const oldAmount = await Token.decryptAmount(
+      cPrivateKey,
+      oldNonce,
+      accountData.state.eAmount,
+    )
+
+    const sharedKey = await Token.deriveSharedKey(
+      cPrivateKey,
+      transferToClaim.recipientPubKeyX,
+      transferToClaim.recipientPubKeyY,
+    )
+
+    const pendingAmount = await Token.decryptAmount(
+      sharedKey,
+      transferToClaim.pendingTransfer.payload.nonce,
+      transferToClaim.pendingTransfer.payload.eAmount,
+    )
+
+    return {
+      ...(await this.getTarget()),
+      cPrivateKey,
+      recipientPublicKeyX: transferToClaim.recipientPubKeyX,
+      recipientPublicKeyY: transferToClaim.recipientPubKeyY,
+      pendingTransferNonce: transferToClaim.pendingTransfer.payload.nonce,
+      pendingTransferAmount: pendingAmount,
+      pendingTransferCommitment:
+        transferToClaim.pendingTransfer.payload.commitment,
+      oldAmount,
+      oldNonce,
+      oldCommitment: BigInt(accountData.state.commitment),
+    }
+  }
+
   private async getCircuitInputsForUpdate(
     account: string,
     cPrivateKey: bigint,
@@ -208,18 +250,23 @@ export class Inputs extends Token {
       accountData.state.eAmount,
     )
 
-    const network = await this.token.runner?.provider?.getNetwork()
-    if (!network) throw new Error("Network not found")
-
     return {
-      chainId: BigInt(network.chainId),
-      contractAddress: BigInt(await this.token.getAddress()),
+      ...(await this.getTarget()),
       cPrivateKey,
       oldAmount,
       oldNonce,
       oldCommitment: BigInt(accountData.state.commitment),
       operation,
       amount,
+    }
+  }
+
+  private async getTarget() {
+    const network = await this.token.runner?.provider?.getNetwork()
+    if (!network) throw new Error("Network not found")
+    return {
+      chainId: BigInt(network.chainId),
+      contractAddress: BigInt(await this.token.getAddress()),
     }
   }
 }

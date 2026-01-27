@@ -12,5 +12,7 @@ template OTKGenerator() {
     component hasher = Poseidon(2);
     hasher.inputs[0] <== key;
     hasher.inputs[1] <== nonce;
+    // hasher.inputs[2] <== chainId;
+    // hasher.inputs[3] <== contractAddress;
     out <== hasher.out;
 }

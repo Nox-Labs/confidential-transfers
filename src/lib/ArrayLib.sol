@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface/IConfidentialTransfers.sol";
+import {FailedCrossChainTransfer} from "../interface/IConfidentialTransfersBridgeable.sol";
 
 library ArrayLib {
     error DuplicateIndex();
@@ -43,6 +44,12 @@ library ArrayLib {
         for (uint256 i = 0; i < numToRemove; i++) {
             self.pop();
         }
+    }
+
+    function remove(FailedCrossChainTransfer[] storage self, uint256 index) internal {
+        uint256 lastIndex = self.length - 1;
+        if (index != lastIndex) self[index] = self[lastIndex];
+        self.pop();
     }
 
     function remove(address[] storage self, address item) internal {

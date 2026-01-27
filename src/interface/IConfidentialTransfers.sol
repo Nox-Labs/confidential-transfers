@@ -60,6 +60,7 @@ struct TransferParams {
     address recipient;
     AuditReport[] stateAuditReports;
     AuditReport[] transferAuditReports;
+    bytes extraData;
 }
 
 struct ApplyParams {
@@ -82,6 +83,7 @@ struct ApplyAndTransferParams {
     uint256[] pendingTransfersIndexes;
     AuditReport[] stateAuditReports;
     AuditReport[] transferAuditReports;
+    bytes extraData;
 }
 
 interface IConfidentialTransfers {
@@ -107,7 +109,8 @@ interface IConfidentialTransfers {
         Payload newState,
         Payload transferPayload,
         AuditReport[] auditReports,
-        AuditReport[] transferAuditReports
+        AuditReport[] transferAuditReports,
+        bytes extraData
     );
 
     event RequiredAuditorAdded(address indexed account, address indexed auditor);
@@ -119,4 +122,5 @@ interface IConfidentialTransfers {
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
+    error InvalidPublicKey();
 }

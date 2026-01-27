@@ -7,7 +7,6 @@ import { confidentialOFTAbi } from "./artifacts/abi/ConfidentialOFT.js"
 import { Utils } from "./modules/utils.js"
 import { Params } from "./modules/params.js"
 
-import type { MockERC20 as ERC20 } from "./artifacts/typechain/test/utils/mock/MockERC20.js"
 import type { ProofOutput } from "./modules/types.js"
 import type {
   ConfidentialTransfers,
@@ -18,6 +17,10 @@ import type {
   UpdateParamsStruct as cUpdateParams,
   TransferParamsStruct as cTransferParams,
   ApplyAndTransferParamsStruct as cApplyAndTransferParams,
+  PendingTransferStruct as PendingTransfer,
+  AuditReportStruct as AuditReport,
+  ZKArtifactsStruct as ZKArtifacts,
+  PayloadStructOutput as PayloadOutput,
 } from "./artifacts/typechain/src/ConfidentialTransfers.js"
 import * as ConfidentialTransfersTypechain from "./artifacts/typechain/src/ConfidentialTransfers.js"
 import type {
@@ -25,13 +28,20 @@ import type {
   CSendParamsStruct as CSendParams,
 } from "./artifacts/typechain/src/ConfidentialOFT.js"
 import * as ConfidentialOFTTypechain from "./artifacts/typechain/src/ConfidentialOFT.js"
+import type {
+  ConfidentialTransfersBridgeable,
+  ClaimParamsStruct as cClaimParams,
+} from "./artifacts/typechain/src/ConfidentialTransfersBridgeable.js"
+import * as ConfidentialTransfersBridgeableTypechain from "./artifacts/typechain/src/ConfidentialTransfersBridgeable.js"
+import { confidentialTransfersBridgeableAbi } from "./artifacts/abi/ConfidentialTransfersBridgeable.js"
 
 export {
   confidentialTransfersAbi,
+  confidentialTransfersBridgeableAbi,
   confidentialOFTAbi,
   ConfidentialTransfers,
+  ConfidentialTransfersBridgeable,
   ConfidentialOFT,
-  ERC20,
   Account,
   Payload,
   cInitParams,
@@ -40,10 +50,16 @@ export {
   cUpdateParams,
   cTransferParams,
   cApplyAndTransferParams,
+  cClaimParams,
+  PendingTransfer,
+  AuditReport,
+  ZKArtifacts,
+  PayloadOutput,
   ProofOutput,
   Utils,
   ConfidentialTransfersTypechain,
   ConfidentialOFTTypechain,
+  ConfidentialTransfersBridgeableTypechain,
   SDKTypes,
 }
 
@@ -51,14 +67,17 @@ export class SDK extends Params {
   constructor(
     tokenAddress: string,
     rpcUrl: string | ethers.ContractRunner,
-    options: SDKOptions
+    options: SDKOptions,
   ) {
     const runner =
       typeof rpcUrl === "string" ? new ethers.JsonRpcProvider(rpcUrl) : rpcUrl
 
-    const func = options.isOFT
-      ? SDK.getConfidentialOFTInstance
-      : SDK.getConfidentialTransfersInstance
+    const func =
+      options.type === "ConfidentialOFT"
+        ? SDK.getConfidentialOFTInstance
+        : options.type === "ConfidentialTransfersBridgeable"
+          ? SDK.getConfidentialTransfersBridgeableInstance
+          : SDK.getConfidentialTransfersInstance
 
     super(func(tokenAddress, runner), options)
   }
