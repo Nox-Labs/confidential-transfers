@@ -60,7 +60,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         _transfer(from, to, amount);
     }
 
-    function quoteCSend(CSendParams calldata params) public view returns (MessagingFee memory msgFee) {
+    function quoteCSend(CSendParams calldata params) external view returns (MessagingFee memory msgFee) {
         Payload memory pendingTransferPackage = Payload({
             nonce: _getCStorage().accounts[msg.sender].state.nonce + 1,
             commitment: params.transferParams.artifacts.outputs[2],
@@ -79,7 +79,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
     }
 
     function cSend(CSendParams calldata params, MessagingFee calldata fee, address refundAddress)
-        public
+        external
         payable
         onlyInitialized(msg.sender)
         checkRequiredAuditor(msg.sender, params.transferParams.stateAuditReports)
