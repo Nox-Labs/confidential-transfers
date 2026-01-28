@@ -21,7 +21,7 @@ describe("ConfidentialTransfers", function () {
           const stateAuditorReports = await f.sdk.createStateAuditReport(
             f.user1CPrivateKey,
             0n,
-            [f.user2.address]
+            [f.user2.address],
           )
           const filename = f.getFilename("init", f.user1.index, 0n)
           const proof = f.getProofOutput(filename)
@@ -37,7 +37,7 @@ describe("ConfidentialTransfers", function () {
           f.user2CPrivateKey,
           f.user1.address,
           accountAfter.auditReports[0].eOTK,
-          accountAfter.state
+          accountAfter.state,
         )
         expect(amount).to.equal(0n)
       })
@@ -52,25 +52,25 @@ describe("ConfidentialTransfers", function () {
         const stateAuditorReports = await f.sdk.createStateAuditReport(
           f.user1CPrivateKey,
           nonce + 1n,
-          [f.user2.address]
+          [f.user2.address],
         )
         const transferAuditorReports = await f.sdk.createTransferAuditReport(
           f.user1CPrivateKey,
           nonce + 1n,
           f.user2.address,
-          [f.user2.address]
+          [f.user2.address],
         )
         const filename = f.getFilename(
           "transfer",
           f.user1.index,
           nonce,
-          f.TRANSFER_AMOUNT
+          f.TRANSFER_AMOUNT,
         )
         const params = f.sdk.getTransferParams(
           f.user2.address,
           f.getProofOutput(filename),
           stateAuditorReports,
-          transferAuditorReports
+          transferAuditorReports,
         )
         await f.token.connect(f.user1).cTransfer(params)
 
@@ -79,13 +79,13 @@ describe("ConfidentialTransfers", function () {
         expect(accountAfter.pendingTransfers.length).to.equal(1)
         expect(accountAfter.pendingTransfers[0].auditReports.length).to.equal(1)
         expect(
-          accountAfter.pendingTransfers[0].auditReports[0].auditor
+          accountAfter.pendingTransfers[0].auditReports[0].auditor,
         ).to.equal(f.user2.address)
         const amount = await f.sdk.decryptAuditReport(
           f.user2CPrivateKey,
           accountAfter.pendingTransfers[0].sender,
           accountAfter.pendingTransfers[0].auditReports[0].eOTK,
-          accountAfter.pendingTransfers[0].payload
+          accountAfter.pendingTransfers[0].payload,
         )
         expect(amount).to.equal(f.TRANSFER_AMOUNT)
       })
@@ -96,7 +96,7 @@ describe("ConfidentialTransfers", function () {
         const stateAuditorReports = await f.sdk.createStateAuditReport(
           f.user1CPrivateKey,
           0n,
-          [f.user2.address]
+          [f.user2.address],
         )
         const filename = f.getFilename("init", f.user1.index, 0n)
         const proof = f.getProofOutput(filename)
@@ -111,17 +111,17 @@ describe("ConfidentialTransfers", function () {
 
       it("Should able to recover state from on-chain data", async function () {
         const { cPrivateKey } = await f.SDK.deriveConfidentialKeys(
-          BigInt(f.user1.privateKey)
+          BigInt(f.user1.privateKey),
         )
 
         const account = await f.token.getAccount(f.user1.address)
 
-        const amount = await f.SDK.decryptAmount(
+        const amount = await f.sdk.decryptAmount(
           cPrivateKey,
           account.state.nonce,
-          account.state.eAmount
+          account.state.eAmount,
         )
-        const otk = await f.SDK.generateOTK(cPrivateKey, account.state.nonce)
+        const otk = await f.sdk.generateOTK(cPrivateKey, account.state.nonce)
         const commitment = await f.SDK.generateCommitment(amount, otk)
 
         expect(amount).to.equal(0n)

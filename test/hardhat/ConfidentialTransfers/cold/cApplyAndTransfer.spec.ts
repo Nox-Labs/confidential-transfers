@@ -26,14 +26,14 @@ describe("ConfidentialTransfers", function () {
         describe("Payload", function () {
           it("Should update commitment", async function () {
             const accountAfter = await f.token.getAccount(f.user2.address)
-            const otk = await f.SDK.generateOTK(f.user2CPrivateKey, 1n)
+            const otk = await f.sdk.generateOTK(f.user2CPrivateKey, 1n)
             const comm = await f.SDK.generateCommitment(0n, otk)
             expect(accountAfter.state.commitment).to.equal(comm)
           })
 
           it("Should update encrypted amount", async function () {
             const accountAfter = await f.token.getAccount(f.user2.address)
-            const otk = await f.SDK.generateOTK(f.user2CPrivateKey, 1n)
+            const otk = await f.sdk.generateOTK(f.user2CPrivateKey, 1n)
             const eAmount = await f.SDK.cipher(otk, 1n, 0n)
             expect(accountAfter.state.eAmount).to.equal(eAmount)
           })

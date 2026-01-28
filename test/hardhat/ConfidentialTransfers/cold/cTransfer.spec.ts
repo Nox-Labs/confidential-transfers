@@ -19,7 +19,7 @@ describe("ConfidentialTransfers", function () {
         describe("Payload", function () {
           it("Should update commitment", async function () {
             const accountAfter = await f.token.getAccount(f.user1.address)
-            const otk = await f.SDK.generateOTK(f.user1CPrivateKey, 2n)
+            const otk = await f.sdk.generateOTK(f.user1CPrivateKey, 2n)
             const amount = f.DEPOSIT_AMOUNT - f.TRANSFER_AMOUNT
             const comm = await f.SDK.generateCommitment(amount, otk)
             expect(accountAfter.state.commitment).to.equal(comm)
@@ -27,7 +27,7 @@ describe("ConfidentialTransfers", function () {
 
           it("Should update encrypted amount", async function () {
             const accountAfter = await f.token.getAccount(f.user1.address)
-            const otk = await f.SDK.generateOTK(f.user1CPrivateKey, 2n)
+            const otk = await f.sdk.generateOTK(f.user1CPrivateKey, 2n)
             const amount = f.DEPOSIT_AMOUNT - f.TRANSFER_AMOUNT
             const eAmount = await f.SDK.cipher(otk, 2n, amount)
             expect(accountAfter.state.eAmount).to.equal(eAmount)

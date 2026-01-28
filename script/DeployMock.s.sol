@@ -24,8 +24,6 @@ contract DeployMock is Script {
     function run(string memory chainName) public {
         vm.createSelectFork(chainName);
 
-        // vm.deal(msg.sender, 1000 ether);
-
         address endpoint = chainToEndpoint[chainName];
 
         require(endpoint != address(0), string.concat("Endpoint not found for chain: ", chainName));

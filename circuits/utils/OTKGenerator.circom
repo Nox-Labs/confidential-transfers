@@ -9,10 +9,10 @@ template OTKGenerator() {
     
     signal output out;
 
-    component hasher = Poseidon(2);
+    component hasher = Poseidon(4);
     hasher.inputs[0] <== key;
     hasher.inputs[1] <== nonce;
-    // hasher.inputs[2] <== chainId;
-    // hasher.inputs[3] <== contractAddress;
+    hasher.inputs[2] <== chainId;
+    hasher.inputs[3] <== contractAddress;
     out <== hasher.out;
 }

@@ -8,7 +8,7 @@ export class Auditors extends Inputs {
     nonce: bigint,
     auditorAddresses: string[],
   ): Promise<AuditReportStruct[]> {
-    const otk = await Inputs.generateOTK(cPrivateKey, nonce)
+    const otk = await this.generateOTK(cPrivateKey, nonce)
     return await this.createAuditReport(
       cPrivateKey,
       otk,
@@ -30,7 +30,7 @@ export class Auditors extends Inputs {
       pubKeyX,
       pubKeyY,
     )
-    const otk = await Inputs.generateOTK(sharedKey, nonce)
+    const otk = await this.generateOTK(sharedKey, nonce)
     return await this.createAuditReport(
       cPrivateKey,
       otk,

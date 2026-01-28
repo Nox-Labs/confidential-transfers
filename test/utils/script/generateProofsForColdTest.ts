@@ -345,7 +345,6 @@ async function claim(execute: boolean, indexToClaim: number) {
     claimProofOutput = await sdk.generateClaimProof(claimInputs)
   }
   const claimParams = sdk.getClaimParams(indexToClaim, claimProofOutput)
-  console.log("claimParams", claimParams)
   if (execute) await token.connect(user1).cClaim(claimParams)
   saveProofToFile(filename, claimProofOutput)
 }

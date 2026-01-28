@@ -62,7 +62,7 @@ export class Inputs extends Token {
 
     const oldNonce = senderAccountData.state.nonce
 
-    const oldAmount = await Token.decryptAmount(
+    const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
       senderAccountData.state.eAmount,
@@ -96,7 +96,7 @@ export class Inputs extends Token {
 
     const oldNonce = senderAccountData.state.nonce
 
-    const oldAmount = await Token.decryptAmount(
+    const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
       senderAccountData.state.eAmount,
@@ -120,13 +120,13 @@ export class Inputs extends Token {
           pubKeyY,
         )
 
-        const amount = await Token.decryptAmount(
+        const amount = await this.decryptAmount(
           sharedKey,
           transfer.payload.nonce,
           transfer.payload.eAmount,
         )
 
-        const otk = await Token.generateOTK(sharedKey, transfer.payload.nonce)
+        const otk = await this.generateOTK(sharedKey, transfer.payload.nonce)
 
         return { amount, otk }
       }),
@@ -204,7 +204,7 @@ export class Inputs extends Token {
 
     const oldNonce = accountData.state.nonce
 
-    const oldAmount = await Token.decryptAmount(
+    const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
       accountData.state.eAmount,
@@ -216,7 +216,7 @@ export class Inputs extends Token {
       transferToClaim.recipientPubKeyY,
     )
 
-    const pendingAmount = await Token.decryptAmount(
+    const pendingAmount = await this.decryptAmount(
       sharedKey,
       transferToClaim.pendingTransfer.payload.nonce,
       transferToClaim.pendingTransfer.payload.eAmount,
@@ -248,7 +248,7 @@ export class Inputs extends Token {
 
     const oldNonce = accountData.state.nonce
 
-    const oldAmount = await Token.decryptAmount(
+    const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
       accountData.state.eAmount,
@@ -262,15 +262,6 @@ export class Inputs extends Token {
       oldCommitment: BigInt(accountData.state.commitment),
       operation,
       amount,
-    }
-  }
-
-  private async getTarget() {
-    const network = await this.token.runner?.provider?.getNetwork()
-    if (!network) throw new Error("Network not found")
-    return {
-      chainId: BigInt(network.chainId),
-      contractAddress: BigInt(await this.token.getAddress()),
     }
   }
 }

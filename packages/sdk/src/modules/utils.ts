@@ -23,22 +23,20 @@ export class Utils {
   static async generateOTK(
     key: bigint,
     nonce: bigint,
-    // chainId: bigint,
-    // contractAddress: bigint,
+    chainId: bigint,
+    contractAddress: bigint,
   ): Promise<bigint> {
-    return this.poseidon([key, nonce])
-    // return this.poseidon([key, nonce, chainId, contractAddress])
+    return this.poseidon([key, nonce, chainId, contractAddress])
   }
 
   static async decryptAmount(
     key: bigint,
     nonce: bigint,
     eAmount: bigint,
-    // chainId: bigint,
-    // contractAddress: bigint,
+    chainId: bigint,
+    contractAddress: bigint,
   ): Promise<bigint> {
-    const otk = await this.generateOTK(key, nonce)
-    // const otk = await this.generateOTK(key, nonce, chainId, contractAddress)
+    const otk = await this.generateOTK(key, nonce, chainId, contractAddress)
     return await this.decipher(otk, nonce, eAmount)
   }
 

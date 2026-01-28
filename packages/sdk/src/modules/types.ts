@@ -5,16 +5,16 @@ export type ProofOutput = {
   pubSignals: BigNumberish[]
 }
 
-type Target = {
+export type Target = {
   chainId: bigint
   contractAddress: bigint
 }
 
-type CPrivateKey = {
+export type CPrivateKey = {
   cPrivateKey: bigint
 }
 
-type OldState = {
+export type OldState = {
   oldAmount: bigint
   oldNonce: bigint
   oldCommitment: bigint
