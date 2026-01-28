@@ -61,7 +61,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         (newState, pendingTransferPayload) = _transfer(transferParams);
 
-        _getConfidentialTransferStorage().accounts[msg.sender].state = newState;
+        _getCStorage().accounts[msg.sender].state = newState;
 
         pendingTransfer = PendingTransfer(msg.sender, pendingTransferPayload, transferParams.transferAuditReports);
 
@@ -83,7 +83,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         view
         returns (bytes memory cMsg)
     {
-        Account storage account = _getConfidentialTransferStorage().accounts[recipient];
+        Account storage account = _getCStorage().accounts[recipient];
         cMsg = abi.encode(recipient, account.pubKeyX, account.pubKeyY, pendingTransfer, extraData);
     }
 
@@ -100,12 +100,12 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         (recipient, pubKeyX, pubKeyY, pendingTransfer, extraData) = _decodeCMessage(cMsg);
 
-        Account storage account = _getConfidentialTransferStorage().accounts[recipient];
+        Account storage account = _getCStorage().accounts[recipient];
 
         bool success = account.pubKeyX == pubKeyX && account.pubKeyY == pubKeyY;
 
         if (success) {
-            _getConfidentialTransferStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
+            _getCStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
         } else {
             _getBridgeableStorage()
             .failedCrossChainTransfers[pendingTransfer.sender].push(
@@ -148,7 +148,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         Payload memory newState = _claim(claimParams);
 
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        Account storage account = _getCStorage().accounts[msg.sender];
         account.state = newState;
         account.auditReports = claimParams.stateAuditReports;
 
@@ -166,7 +166,7 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         FailedCrossChainTransfer storage failedTransfer = _getBridgeableStorage()
         .failedCrossChainTransfers[msg.sender][params.indexToClaim];
 
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        Account storage account = _getCStorage().accounts[msg.sender];
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [

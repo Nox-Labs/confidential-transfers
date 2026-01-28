@@ -68,7 +68,6 @@ async function generateAndSaveProofs() {
       await (token as unknown as MockConfidentialTransfersBridgeable)
         .connect(user2)
         .addFailedCrossChainTransfer(
-          user2.address,
           recipientAccount.pubKeyX,
           recipientAccount.pubKeyY,
           pt,
@@ -339,7 +338,6 @@ async function claim(execute: boolean, indexToClaim: number) {
     indexToClaim,
   )
   // claimInputs.pendingTransferAmount = TRANSFER_AMOUNT
-  console.log("claimInputs", claimInputs)
   let claimProofOutput: ProofOutput
   if (isFileExists(filename)) {
     claimProofOutput = getProofOutput(filename)

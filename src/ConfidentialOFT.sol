@@ -62,7 +62,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
 
     function quoteCSend(CSendParams calldata params) public view returns (MessagingFee memory msgFee) {
         Payload memory pendingTransferPackage = Payload({
-            nonce: _getConfidentialTransferStorage().accounts[msg.sender].state.nonce + 1,
+            nonce: _getCStorage().accounts[msg.sender].state.nonce + 1,
             commitment: params.transferParams.artifacts.outputs[2],
             eAmount: params.transferParams.artifacts.outputs[3]
         });

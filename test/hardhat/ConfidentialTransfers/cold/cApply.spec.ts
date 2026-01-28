@@ -219,6 +219,40 @@ describe("ConfidentialTransfers", function () {
             ).to.be.revertedWithCustomError(f.token, "DuplicateIndex")
           })
 
+          it("Should revert if indexes are out of bounds", async function () {
+            const params = f.sdk.getApplyParams(
+              [1, 2, 3, 4, 5, 6],
+              f.MOCK_PROOF_OUTPUT,
+            )
+            await expect(
+              f.token.connect(f.user2).cApply(params),
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "InvalidPendingTransfersIndexes",
+            )
+          })
+
+          it("Should revert if indexes are empty", async function () {
+            await expect(
+              f.token
+                .connect(f.user2)
+                .cApply(f.sdk.getApplyParams([], f.MOCK_PROOF_OUTPUT)),
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "InvalidPendingTransfersIndexes",
+            )
+          })
+
+          it("Should revert if pending transfers indexes are invalid", async function () {
+            const params = f.sdk.getApplyParams([100], f.MOCK_PROOF_OUTPUT)
+            await expect(
+              f.token.connect(f.user2).cApply(params),
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "InvalidPendingTransfersIndexes",
+            )
+          })
+
           it("Should revert if required auditor is not found", async function () {
             await f.cTransfer(
               "cold",

@@ -187,7 +187,10 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     indexToClaim: number,
+    cPrivateKeyUsedInTransfer?: bigint,
   ): Promise<CircuitClaimInputs> {
+    cPrivateKeyUsedInTransfer = cPrivateKeyUsedInTransfer ?? cPrivateKey
+
     const failedCrossChainTransfers = await (
       this.token as ConfidentialTransfersBridgeable
     ).getFailedCrossChainTransfers(account)
@@ -208,7 +211,7 @@ export class Inputs extends Token {
     )
 
     const sharedKey = await Token.deriveSharedKey(
-      cPrivateKey,
+      cPrivateKeyUsedInTransfer,
       transferToClaim.recipientPubKeyX,
       transferToClaim.recipientPubKeyY,
     )
@@ -222,6 +225,7 @@ export class Inputs extends Token {
     return {
       ...(await this.getTarget()),
       cPrivateKey,
+      cPrivateKeyUsedInTransfer,
       recipientPublicKeyX: transferToClaim.recipientPubKeyX,
       recipientPublicKeyY: transferToClaim.recipientPubKeyY,
       pendingTransferNonce: transferToClaim.pendingTransfer.payload.nonce,

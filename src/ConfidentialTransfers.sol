@@ -50,7 +50,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     bytes32 private constant CONFIDENTIAL_TRANSFERS_STORAGE_POSITION =
         0x74fe0b1f91feaaa95d609d18323a1d882fca941a422b86d407dc143fbb562900;
 
-    function _getConfidentialTransferStorage() internal pure returns (ConfidentialTransfersStorage storage $) {
+    function _getCStorage() internal pure returns (ConfidentialTransfersStorage storage $) {
         assembly {
             $.slot := CONFIDENTIAL_TRANSFERS_STORAGE_POSITION
         }
@@ -64,7 +64,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         TransferPlonkVerifier _transferVerifier,
         ApplyAndTransferPlonkVerifier _applyAndTransferVerifier
     ) internal onlyInitializing {
-        ConfidentialTransfersStorage storage s = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage s = _getCStorage();
         s.initVerifier = _initVerifier;
         s.applyVerifier = _applyVerifier;
         s.updateVerifier = _updateVerifier;
@@ -80,7 +80,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         virtual
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
     {
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        Account storage account = _getCStorage().accounts[msg.sender];
 
         if (account.state.commitment != 0) revert AccountAlreadyInitialized();
 
@@ -100,7 +100,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     {
         _cTransfer(msg.sender, address(this), params.amount);
         Payload memory newState = _update(0, params);
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        Account storage account = _getCStorage().accounts[msg.sender];
         account.state = newState;
         account.auditReports = params.stateAuditReports;
 
@@ -114,7 +114,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
     {
         Payload memory newState = _update(1, params);
-        Account storage account = _getConfidentialTransferStorage().accounts[msg.sender];
+        Account storage account = _getCStorage().accounts[msg.sender];
         account.state = newState;
         account.auditReports = params.stateAuditReports;
         _cTransfer(address(this), msg.sender, params.amount);
@@ -128,7 +128,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         onlyInitialized(msg.sender)
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         Payload memory newState = _apply(params);
 
         Account storage account = $.accounts[msg.sender];
@@ -148,7 +148,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         (Payload memory newState, Payload memory transferPackage) = _transfer(params);
 
         Account storage account = $.accounts[msg.sender];
@@ -179,7 +179,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         (Payload memory newState, Payload memory pendingTransferPayload) = _applyAndTransfer(params);
         Account storage account = $.accounts[msg.sender];
         account.state = newState;
@@ -202,12 +202,12 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     }
 
     function addRequiredAuditor(address auditor) public virtual onlyInitialized(auditor) {
-        _getConfidentialTransferStorage().accounts[msg.sender].requiredAuditors.push(auditor);
+        _getCStorage().accounts[msg.sender].requiredAuditors.push(auditor);
         emit RequiredAuditorAdded(msg.sender, auditor);
     }
 
     function removeRequiredAuditor(address auditor) public virtual {
-        _getConfidentialTransferStorage().accounts[msg.sender].requiredAuditors.remove(auditor);
+        _getCStorage().accounts[msg.sender].requiredAuditors.remove(auditor);
         emit RequiredAuditorRemoved(msg.sender, auditor);
     }
 
@@ -219,7 +219,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [
@@ -242,7 +242,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         checkArrayLength(2, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         Account storage account = $.accounts[msg.sender];
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
@@ -266,13 +266,12 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         internal
         view
         checkArrayLength(4, params.artifacts.outputs.length)
+        checkMaxPendingTransfers(params.recipient)
         returns (Payload memory newState, Payload memory pendingTransferPackage)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         Account storage account = $.accounts[msg.sender];
         Account storage recipientAccount = $.accounts[params.recipient];
-
-        if (recipientAccount.pendingTransfers.length >= $.maxPendingTransfers) revert MaxPendingTransfersReached();
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
@@ -300,15 +299,15 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         internal
         view
         checkArrayLength(2, params.artifacts.outputs.length)
+        checkPendingTransfersIndexes(msg.sender, params.pendingTransfersIndexes.length)
         returns (Payload memory newState)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
 
         Account storage account = $.accounts[msg.sender];
 
         uint256 n = params.pendingTransfersIndexes.length;
-
-        if (n > account.pendingTransfers.length || n == 0) revert InvalidPendingTransfersIndexes();
+        uint256 maxIndex = account.pendingTransfers.length;
 
         uint256[7 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
         pubSignals[0] = params.artifacts.outputs[0];
@@ -322,6 +321,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         for (uint256 i = 0; i < MAX_PENDING_TRANSFERS_APPLY; i++) {
             if (i < n) {
                 uint256 targetIndex = params.pendingTransfersIndexes[i];
+                if (targetIndex >= maxIndex) revert InvalidPendingTransfersIndexes();
                 pubSignals[7 + i] = uint256(account.pendingTransfers[targetIndex].payload.commitment);
             } else {
                 pubSignals[7 + i] = 0;
@@ -338,17 +338,16 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         internal
         view
         checkArrayLength(4, params.artifacts.outputs.length)
+        checkMaxPendingTransfers(params.recipient)
+        checkPendingTransfersIndexes(msg.sender, params.pendingTransfersIndexes.length)
         returns (Payload memory newState, Payload memory pendingTransfer)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         Account storage account = $.accounts[msg.sender];
         Account storage recipientAccount = $.accounts[params.recipient];
 
-        if (recipientAccount.pendingTransfers.length >= $.maxPendingTransfers) revert MaxPendingTransfersReached();
-
         uint256 n = params.pendingTransfersIndexes.length;
-
-        if (n > account.pendingTransfers.length || n == 0) revert InvalidPendingTransfersIndexes();
+        uint256 maxIndex = account.pendingTransfers.length;
 
         uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[11 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
@@ -367,6 +366,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         for (uint256 i = 0; i < MAX_PENDING_TRANSFERS_APPLY; i++) {
             if (i < n) {
                 uint256 targetIndex = params.pendingTransfersIndexes[i];
+                if (targetIndex >= maxIndex) revert InvalidPendingTransfersIndexes();
                 pubSignals[11 + i] = uint256(account.pendingTransfers[targetIndex].payload.commitment);
             } else {
                 pubSignals[11 + i] = 0;
@@ -389,7 +389,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     /* VIEW */
 
     function getAccount(address account) public view returns (Account memory) {
-        return _getConfidentialTransferStorage().accounts[account];
+        return _getCStorage().accounts[account];
     }
 
     function getCPublicKeys(address[] calldata accounts)
@@ -397,7 +397,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         view
         returns (uint256[] memory pubKeyXs, uint256[] memory pubKeyYs)
     {
-        ConfidentialTransfersStorage storage $ = _getConfidentialTransferStorage();
+        ConfidentialTransfersStorage storage $ = _getCStorage();
         pubKeyXs = new uint256[](accounts.length);
         pubKeyYs = new uint256[](accounts.length);
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -417,12 +417,27 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     }
 
     modifier onlyInitialized(address account) {
-        if (_getConfidentialTransferStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized();
+        if (_getCStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized();
         _;
     }
 
     modifier checkRequiredAuditor(address account, AuditReport[] calldata auditReports) {
-        _getConfidentialTransferStorage().accounts[account].requiredAuditors.assertContains(auditReports);
+        _getCStorage().accounts[account].requiredAuditors.assertContains(auditReports);
+        _;
+    }
+
+    modifier checkMaxPendingTransfers(address recipient) {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.accounts[recipient].pendingTransfers.length >= $.maxPendingTransfers) {
+            revert MaxPendingTransfersReached();
+        }
+        _;
+    }
+
+    modifier checkPendingTransfersIndexes(address sender, uint256 n) {
+        if (n > _getCStorage().accounts[sender].pendingTransfers.length || n == 0) {
+            revert InvalidPendingTransfersIndexes();
+        }
         _;
     }
 }

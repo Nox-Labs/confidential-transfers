@@ -52,6 +52,7 @@ export type CircuitApplyAndTransferInputs = CircuitApplyInputs &
 export type CircuitClaimInputs = Target &
   CPrivateKey &
   OldState & {
+    cPrivateKeyUsedInTransfer: bigint
     recipientPublicKeyX: bigint
     recipientPublicKeyY: bigint
     pendingTransferNonce: bigint

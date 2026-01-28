@@ -9,6 +9,7 @@ include "./modules/NewStateGenerator.circom";
 template Claim() {
     // --- Private Inputs ---
     signal input cPrivateKey;
+    signal input cPrivateKeyUsedInTransfer;
     signal input oldAmount;
     signal input pendingTransferAmount;
 
@@ -35,7 +36,7 @@ template Claim() {
     oldStateChecker.oldCommitment <== oldCommitment;
 
     component sharedKeyGenerator = SharedKeyGenerator();
-    sharedKeyGenerator.privateKey <== cPrivateKey;
+    sharedKeyGenerator.privateKey <== cPrivateKeyUsedInTransfer;
     sharedKeyGenerator.publicKey_X <== recipientPublicKeyX;
     sharedKeyGenerator.publicKey_Y <== recipientPublicKeyY;
     signal sharedKey <== sharedKeyGenerator.sharedKey;

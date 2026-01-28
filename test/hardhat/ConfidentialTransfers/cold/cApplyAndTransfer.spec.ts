@@ -256,7 +256,13 @@ describe("ConfidentialTransfers", function () {
             await expect(
               f.token
                 .connect(f.user2)
-                .cApply(f.sdk.getApplyParams(indexes, proof)),
+                .cApplyAndTransfer(
+                  f.sdk.getApplyAndTransferParams(
+                    f.user1.address,
+                    indexes,
+                    proof,
+                  ),
+                ),
             ).to.be.revertedWithCustomError(f.token, "ProofVerificationFailed")
           })
 
@@ -271,10 +277,14 @@ describe("ConfidentialTransfers", function () {
             )
 
             const proof = f.getProofOutput(filename)
-            const params = f.sdk.getApplyParams(indexes, proof)
+            const params = f.sdk.getApplyAndTransferParams(
+              f.user1.address,
+              indexes,
+              proof,
+            )
             params.artifacts.outputs.pop()
             await expect(
-              f.token.connect(f.user2).cApply(params),
+              f.token.connect(f.user2).cApplyAndTransfer(params),
             ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
           })
 
@@ -297,6 +307,52 @@ describe("ConfidentialTransfers", function () {
             await expect(
               f.token.connect(f.user2).cApplyAndTransfer(params),
             ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
+          })
+
+          it("Should revert if required auditor is not found", async function () {
+            await f.cTransfer(
+              "cold",
+              f.user1,
+              f.user2.address,
+              f.TRANSFER_AMOUNT,
+            )
+            await f.token.connect(f.user2).addRequiredAuditor(f.user1.address)
+            const params = f.sdk.getApplyAndTransferParams(
+              f.user1.address,
+              [0],
+              f.MOCK_PROOF_OUTPUT,
+            )
+            await expect(
+              f.token.connect(f.user2).cApplyAndTransfer(params),
+            ).to.be.revertedWithCustomError(f.token, "NotFound")
+          })
+
+          it("Should revert if pending transfers indexes are invalid", async function () {
+            const params = f.sdk.getApplyAndTransferParams(
+              f.user1.address,
+              [100],
+              f.MOCK_PROOF_OUTPUT,
+            )
+            await expect(
+              f.token.connect(f.user2).cApplyAndTransfer(params),
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "InvalidPendingTransfersIndexes",
+            )
+          })
+
+          it("Should revert if pending transfers indexes are empty", async function () {
+            const params = f.sdk.getApplyAndTransferParams(
+              f.user1.address,
+              [],
+              f.MOCK_PROOF_OUTPUT,
+            )
+            await expect(
+              f.token.connect(f.user2).cApplyAndTransfer(params),
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "InvalidPendingTransfersIndexes",
+            )
           })
 
           it("Should revert if required auditor is not found", async function () {
