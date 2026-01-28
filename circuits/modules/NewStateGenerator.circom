@@ -9,6 +9,14 @@ include "../utils/CommitmentGenerator.circom";
 include "../utils/SharedKeyGenerator.circom";
 include "../utils/Cipherer.circom";
 
+/**
+ * @title NewStateGenerator
+ * @notice Helper module to generate a new user state.
+ * @dev Generates:
+ *      1. One-Time Key (OTK) from the master key and nonce.
+ *      2. New Commitment (Hash of amount and OTK).
+ *      3. Encrypted Amount (using OTK as the encryption key).
+ */
 template NewStateGenerator() {
     signal input key;
     signal input newAmount;

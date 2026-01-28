@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 struct Payload {
     uint256 nonce;
     uint256 commitment;
-    uint256 eAmount;
+    uint256 eAmount; // Encrypted amount
 }
 
 struct PendingTransfer {
@@ -29,7 +29,7 @@ struct ZKArtifacts {
 
 struct AuditReport {
     address auditor;
-    uint256 eOTK;
+    uint256 eOTK; // Encrypted One-Time Key
 }
 
 struct InitParams {

@@ -8,6 +8,14 @@ include "./utils/CommitmentGenerator.circom";
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title Apply
+ * @notice Processes pending incoming transfers to update the user's confidential balance.
+ * @dev Verifies that the user knows the private key for the current state (oldCommitment)
+ *      and validates the commitments of the pending transfers.
+ *      Computes the new confidential state (newCommitment, eAmount) by summing up valid pending transfers.
+ * @param max Maximum number of pending transfers that can be processed in one batch.
+ */
 template Apply(max) {
     // --- Private Inputs ---
     signal input cPrivateKey;
@@ -46,18 +54,19 @@ template Apply(max) {
         isLess[i] = LessThan(32);
         isLess[i].in[0] <== i;
         isLess[i].in[1] <== n;
-        // isLess[i].out will be 1 if i < n, and 0 otherwise.
+        // isLess[i].out is a boolean mask: 1 if this transfer should be processed (i < n), 0 otherwise.
 
         commitmentGenerators[i] = CommitmentGenerator();
         commitmentGenerators[i].amount <== pendingTransfersAmounts[i];
         commitmentGenerators[i].otk <== pendingTransfersOTKs[i];
         
-        // Assertion:
-        // (pendingTransfersCommitments[i] - commitmentGenerators[i].out) * isLess[i].out === 0
-        // This means that if isLess[i].out == 0 (this is a fake transfer), the difference can be any.
+        // Verification Logic:
+        // If isLess[i].out is 1 (active transfer): we assert that calculated commitment equals provided commitment.
+        // If isLess[i].out is 0 (padding transfer): the check is multiplied by 0, effectively skipping verification.
         (pendingTransfersCommitments[i] - commitmentGenerators[i].out) * isLess[i].out === 0;
 
-        // Add the sum only for real transfers
+        // Accumulator Logic:
+        // We add the amount to the intermediate sum ONLY if it's an active transfer (multiplied by mask).
         intermediateAmount[i+1] <== intermediateAmount[i] + pendingTransfersAmounts[i] * isLess[i].out;
     }
     

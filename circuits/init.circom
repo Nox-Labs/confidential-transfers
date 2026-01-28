@@ -4,6 +4,13 @@ include "circomlib/circuits/babyjub.circom";
 
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title Init
+ * @notice Initializes a new confidential account.
+ * @dev Derives the public key from the provided private key.
+ *      Generates the initial zero-balance state (nonce=0, amount=0).
+ *      This proof ensures that the user controls the private key associated with the account.
+ */
 template Init() {
     // --- Private Inputs ---
     signal input cPrivateKey;   

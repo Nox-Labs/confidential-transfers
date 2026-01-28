@@ -1,5 +1,12 @@
 pragma circom 2.0.0;
 
+/**
+ * @title PoseidonStreamCipher
+ * @notice A simple stream cipher based on the Poseidon hash function.
+ * @dev Generates a keystream by hashing a key and a counter (entropy + index).
+ *      Encrypts plaintext by adding the keystream (field addition).
+ * @param n Length of the plaintext array.
+ */
 template PoseidonStreamCipher(n) {
     signal input key;
     signal input entropy;
@@ -16,6 +23,11 @@ template PoseidonStreamCipher(n) {
     }
 }
 
+/**
+ * @title Cipherer
+ * @notice Wrapper for PoseidonStreamCipher for a single field element.
+ * @dev Encrypts a single value using a key and nonce as entropy.
+ */
 template Cipherer() {
     signal input key;
     signal input nonce;

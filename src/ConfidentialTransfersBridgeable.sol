@@ -14,11 +14,17 @@ import {PlonkVerifier as ClaimPlonkVerifier} from "./verifiers/ClaimPlonkVerifie
 
 import {ArrayLib} from "./lib/ArrayLib.sol";
 
+/**
+ * @title ConfidentialTransfersBridgeable
+ * @notice Extension of ConfidentialTransfers supporting cross-chain confidential transfers.
+ * @dev Implements logic for encoding/decoding cross-chain messages and handling failed transfers (claims).
+ *      Designed to work with a bridge adapter (like LayerZero OFT).
+ */
 abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, IConfidentialTransfersBridgeable {
     using ArrayLib for uint256[];
     using ArrayLib for FailedCrossChainTransfer[];
 
-    /// @custom:storage-location erc7201:confidentialTransfersBridgeableClaimer
+    /// @custom:storage-location erc7201:confidentialTransfersBridgeableC
     struct ConfidentialTransfersBridgeableStorage {
         ClaimPlonkVerifier claimVerifier;
         mapping(address account => FailedCrossChainTransfer[]) failedCrossChainTransfers;
@@ -27,21 +33,37 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     // keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersBridgeableStorage")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant BRIDGEABLE_STORAGE = 0x7418b332d832c6a4f05d896925d27af0f7ce65c6ddf4b2f3da48139ec802cc00;
 
-    function _getBridgeableStorage() internal pure returns (ConfidentialTransfersBridgeableStorage storage $) {
+    function _getCStorageBridgeable() internal pure returns (ConfidentialTransfersBridgeableStorage storage $) {
         assembly {
             $.slot := BRIDGEABLE_STORAGE
         }
     }
 
+    /**
+     * @notice Initializes the bridgeable contract
+     * @dev Must be called in the constructor/initializer of the contract.
+     * @param claimVerifier Verifier for claiming failed transfers
+     */
     function __ConfidentialTransfersBridgeable_init(ClaimPlonkVerifier claimVerifier) internal onlyInitializing {
-        _getBridgeableStorage().claimVerifier = claimVerifier;
+        _getCStorageBridgeable().claimVerifier = claimVerifier;
     }
 
+    /**
+     * @notice Deposits tokens and burns them from the bridgeable contract
+     * @notice Burning tokens makes confidential transfers tokens bridgeable
+     * @dev Extends cDeposit to burn the deposited amount (locking it in the bridge)
+     * @param updateParams Deposit parameters
+     */
     function cDeposit(UpdateParams calldata updateParams) public virtual override {
         super.cDeposit(updateParams);
         _cBurn(updateParams.amount);
     }
 
+    /**
+     * @notice Withdraws tokens by minting them back to the contract
+     * @dev Extends cWithdraw to mint the withdrawn amount
+     * @param updateParams Withdraw parameters
+     */
     function cWithdraw(UpdateParams calldata updateParams) public virtual override {
         _cMint(updateParams.amount);
         super.cWithdraw(updateParams);
@@ -50,8 +72,12 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     /* INTERNAL */
 
     /**
-     * @dev This function update sender's state and return the pending transfer to be bridged.
-     * @dev Should be called by bridge sender function.
+     * @notice Updates sender state and prepares a pending transfer for bridging
+     * @dev Called by the bridge sender function to generate the cross-chain message
+     * @param transferParams Parameters for the transfer
+     * @return newState New state of the sender
+     * @return pendingTransfer The transfer object to be bridged
+     * @return cMsg Encoded cross-chain message
      */
     function _cSend(TransferParams calldata transferParams)
         internal
@@ -78,6 +104,13 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         );
     }
 
+    /**
+     * @notice Encodes the confidential transfer message for cross-chain transport
+     * @param recipient Address of the recipient
+     * @param pendingTransfer The transfer object
+     * @param extraData Additional data
+     * @return cMsg Encoded bytes
+     */
     function _encodeCMessage(address recipient, PendingTransfer memory pendingTransfer, bytes memory extraData)
         internal
         view
@@ -88,8 +121,12 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     }
 
     /**
-     * @dev This function update receiver's pending transfers
-     * @dev Should be called by bridge receiver function.
+     * @notice Processes a received cross-chain confidential message
+     * @dev Called by the bridge receiver function to apply the transfer or store as failed
+     * @param cMsg Encoded cross-chain message
+     * @return recipient Address of the recipient
+     * @return pendingTransfer The transfer object
+     * @return extraData Additional data for bridging or identification purposes
      */
     function _cReceive(bytes memory cMsg)
         internal
@@ -102,12 +139,18 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         Account storage account = _getCStorage().accounts[recipient];
 
+        // Check if the recipient's public key in the message matches the one registered on-chain.
+        // This prevents sending funds to an address that doesn't match the intended recipient.
         bool success = account.pubKeyX == pubKeyX && account.pubKeyY == pubKeyY;
 
         if (success) {
+            // Happy path: Recipient keys match. Add to their pending transfers queue.
             _getCStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
         } else {
-            _getBridgeableStorage()
+            // Failure path: Keys mismatch
+            // Store in 'failedCrossChainTransfers' mapped to the SENDER.
+            // This allows the original sender to claim the funds back using 'cClaim'.
+            _getCStorageBridgeable()
             .failedCrossChainTransfers[pendingTransfer.sender].push(
                 FailedCrossChainTransfer(pubKeyX, pubKeyY, pendingTransfer)
             );
@@ -118,6 +161,15 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         );
     }
 
+    /**
+     * @notice Decodes the confidential transfer message
+     * @param cMsg Encoded bytes
+     * @return recipient Address of the recipient
+     * @return pubKeyX Public key X coordinate
+     * @return pubKeyY Public key Y coordinate
+     * @return pendingTransfer The transfer object
+     * @return extraData Additional data
+     */
     function _decodeCMessage(bytes memory cMsg)
         internal
         pure
@@ -135,16 +187,16 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     }
 
     /**
-     * @dev This function claims a failed cross-chain confidential transfer.
-     * @dev Should be called by a pending transfer sender.
-     * @param claimParams The parameters for the claim operation.
+     * @notice Claims a failed cross-chain confidential transfer
+     * @dev Allows the sender to recover funds if the bridge transfer failed
+     * @param claimParams Parameters for the claim operation
      */
     function cClaim(ClaimParams calldata claimParams)
         external
         onlyInitialized(msg.sender)
         checkRequiredAuditor(msg.sender, claimParams.stateAuditReports)
     {
-        ConfidentialTransfersBridgeableStorage storage $ = _getBridgeableStorage();
+        ConfidentialTransfersBridgeableStorage storage $ = _getCStorageBridgeable();
 
         Payload memory newState = _claim(claimParams);
 
@@ -157,13 +209,19 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         emit CFailedTransferClaimed(msg.sender, newState, account.auditReports);
     }
 
+    /**
+     * @notice Internal logic for claiming a failed transfer
+     * @dev Verifies proof and generates new state
+     * @param params Claim parameters
+     * @return newState New state of the sender
+     */
     function _claim(ClaimParams calldata params)
         internal
         view
         checkArrayLength(2, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
-        FailedCrossChainTransfer storage failedTransfer = _getBridgeableStorage()
+        FailedCrossChainTransfer storage failedTransfer = _getCStorageBridgeable()
         .failedCrossChainTransfers[msg.sender][params.indexToClaim];
 
         Account storage account = _getCStorage().accounts[msg.sender];
@@ -182,13 +240,18 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
             failedTransfer.recipientPubKeyY
         ];
 
-        if (!_getBridgeableStorage().claimVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
+        if (!_getCStorageBridgeable().claimVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
 
         newState = Payload({nonce: account.state.nonce + 1, commitment: pubSignals[0], eAmount: pubSignals[1]});
     }
 
+    /**
+     * @notice Retrieves the list of failed cross-chain transfers for a sender
+     * @param sender Address of the sender
+     * @return Array of FailedCrossChainTransfer structs
+     */
     function getFailedCrossChainTransfers(address sender) external view returns (FailedCrossChainTransfer[] memory) {
-        return _getBridgeableStorage().failedCrossChainTransfers[sender];
+        return _getCStorageBridgeable().failedCrossChainTransfers[sender];
     }
 
     /* VIRTUAL INTERNAL */

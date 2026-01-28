@@ -62,7 +62,7 @@ contract MockConfidentialTransfersBridgeable is ERC20, ConfidentialTransfersBrid
         uint256 recipientPubKeyY,
         PendingTransfer memory pendingTransfer
     ) public {
-        _getBridgeableStorage()
+        _getCStorageBridgeable()
         .failedCrossChainTransfers[pendingTransfer.sender].push(
             FailedCrossChainTransfer(recipientPubKeyX, recipientPubKeyY, pendingTransfer)
         );

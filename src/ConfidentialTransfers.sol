@@ -24,6 +24,13 @@ import {ArrayLib} from "./lib/ArrayLib.sol";
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
+/**
+ * @title ConfidentialTransfers
+ * @notice Abstract contract implementing the core logic for confidential token transfers using ZK proofs.
+ * @dev Handles initialization, deposits, withdrawals, and 2-step confidential transfers, zk verification keys and user confidential states.
+ * @dev Do not inherit ERC20 logic.
+ * @notice Contract doesn't validate that reports for auditors are valid. It's only validate that required auditors are added.
+ */
 abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable {
     using ArrayLib for uint256[];
     using ArrayLib for address[];
@@ -56,6 +63,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         }
     }
 
+    /**
+     * @notice Initialize the ConfidentialTransfers contract
+     * @dev Must be called in the constructor/initializer of the contract.
+     * @param _maxPendingTransfers Maximum number of pending transfers per account (protects against DoS attacks)
+     */
     function __ConfidentialTransfers_init(
         uint256 _maxPendingTransfers,
         InitPlonkVerifier _initVerifier,
@@ -73,8 +85,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         s.applyAndTransferVerifier = _applyAndTransferVerifier;
     }
 
-    /* EXTERNAL */
-
+    /**
+     * @notice Initializes a confidential account
+     * @dev Checks if account is already initialized and verifies the proof
+     * @param params Initialization parameters including ZK proof
+     */
     function cInit(InitParams calldata params)
         public
         virtual
@@ -92,6 +107,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit CInitialized(msg.sender, account.pubKeyX, account.pubKeyY, account.state, account.auditReports);
     }
 
+    /**
+     * @notice Deposits public tokens into the confidential state
+     * @dev Transfers public tokens to this contract and updates confidential balance
+     * @param params Deposit parameters including ZK proof
+     */
     function cDeposit(UpdateParams calldata params)
         public
         virtual
@@ -107,6 +127,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit CDeposited(msg.sender, params.amount, newState, account.auditReports);
     }
 
+    /**
+     * @notice Withdraws confidential tokens to public state
+     * @dev Updates confidential balance and transfers public tokens to the user
+     * @param params Withdraw parameters including ZK proof
+     */
     function cWithdraw(UpdateParams calldata params)
         public
         virtual
@@ -122,6 +147,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit CWithdrawn(msg.sender, params.amount, newState, account.auditReports);
     }
 
+    /**
+     * @notice Applies pending transfers to the user's confidential balance
+     * @dev Verifies proof and removes applied transfers from the queue
+     * @param params Apply parameters including indices of transfers to apply
+     */
     function cApply(ApplyParams calldata params)
         public
         virtual
@@ -139,6 +169,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit CApplied(msg.sender, newState, account.auditReports);
     }
 
+    /**
+     * @notice Transfers confidential tokens to another user
+     * @dev Verifies proof and adds a pending transfer to the recipient's queue
+     * @param params Transfer parameters including recipient and ZK proof
+     */
     function cTransfer(TransferParams calldata params)
         public
         virtual
@@ -170,6 +205,11 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         );
     }
 
+    /**
+     * @notice Applies pending transfers and sends a new transfer in one transaction
+     * @dev Optimizes gas by combining apply and transfer operations
+     * @param params Combined parameters for apply and transfer operations
+     */
     function cApplyAndTransfer(ApplyAndTransferParams calldata params)
         public
         virtual
@@ -201,11 +241,20 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         );
     }
 
+    /**
+     * @notice Adds an auditor that must audit all operations for this account
+     * @dev This mechanism is used to ensure that while building tx users don't forget adding auditors
+     * @param auditor Address of the auditor to add
+     */
     function addRequiredAuditor(address auditor) public virtual onlyInitialized(auditor) {
         _getCStorage().accounts[msg.sender].requiredAuditors.push(auditor);
         emit RequiredAuditorAdded(msg.sender, auditor);
     }
 
+    /**
+     * @notice Removes a required auditor
+     * @param auditor Address of the auditor to remove
+     */
     function removeRequiredAuditor(address auditor) public virtual {
         _getCStorage().accounts[msg.sender].requiredAuditors.remove(auditor);
         emit RequiredAuditorRemoved(msg.sender, auditor);
@@ -318,6 +367,9 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         pubSignals[5] = account.state.nonce;
         pubSignals[6] = account.state.commitment;
 
+        // Loop through the maximum possible pending transfers (fixed circuit size).
+        // If the index 'i' is less than the number of transfers to apply 'n', we include the commitment.
+        // Otherwise, we pad with 0 to match the circuit's expected input size.
         for (uint256 i = 0; i < MAX_PENDING_TRANSFERS_APPLY; i++) {
             if (i < n) {
                 uint256 targetIndex = params.pendingTransfersIndexes[i];
@@ -388,10 +440,22 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
     /* VIEW */
 
+    /**
+     * @notice Gets the account information including state and public keys
+     * @param account Address of the user
+     * @return Account struct containing confidential state
+     */
     function getAccount(address account) public view returns (Account memory) {
         return _getCStorage().accounts[account];
     }
 
+    /**
+     * @notice Retrieves confidential public keys for multiple accounts
+     * @dev This function is useful when you need to get public keys while building cApply transaction (Multicall is overkill)
+     * @param accounts Array of user addresses
+     * @return pubKeyXs Array of X coordinates of public keys
+     * @return pubKeyYs Array of Y coordinates of public keys
+     */
     function getCPublicKeys(address[] calldata accounts)
         public
         view

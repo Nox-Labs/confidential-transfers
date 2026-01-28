@@ -23,6 +23,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MessagingReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 
+/**
+ * @title ConfidentialOFT
+ * @notice Omnichain Fungible Token (OFT) with confidential transfer capabilities.
+ * @dev Integrates ConfidentialTransfersBridgeable with LayerZero's OFT standard.
+ *      Allows moving confidential assets across chains via the LayerZero protocol.
+ */
 contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialOFT {
     constructor(
         string memory _tokenName,
@@ -60,6 +66,12 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         _transfer(from, to, amount);
     }
 
+    /**
+     * @notice Quotes the fee for a confidential cross-chain transfer
+     * @dev Calculates the messaging fee for LayerZero
+     * @param params Parameters for the confidential send
+     * @return msgFee The calculated messaging fee
+     */
     function quoteCSend(CSendParams calldata params) external view returns (MessagingFee memory msgFee) {
         Payload memory pendingTransferPackage = Payload({
             nonce: _getCStorage().accounts[msg.sender].state.nonce + 1,
@@ -78,6 +90,14 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         msgFee = _quote(params.dstEid, message, options, false);
     }
 
+    /**
+     * @notice Executes a confidential cross-chain transfer
+     * @dev Sends the confidential transfer message via LayerZero
+     * @param params Parameters for the confidential send
+     * @param fee The messaging fee
+     * @param refundAddress Address to refund excess gas
+     * @return msgReceipt The receipt of the messaging operation
+     */
     function cSend(CSendParams calldata params, MessagingFee calldata fee, address refundAddress)
         external
         payable
@@ -93,6 +113,14 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         msgReceipt = _lzSend(params.dstEid, lzMsg, options, fee, refundAddress);
     }
 
+    /**
+     * @notice Builds the message and options for a standard OFT send
+     * @dev Override from OFT to support custom message building
+     * @param _sendParam Parameters for the send
+     * @param _amountLD Amount in local decimals
+     * @return message Encoded message
+     * @return options Encoded options
+     */
     function _buildMsgAndOptions(SendParam calldata _sendParam, uint256 _amountLD)
         internal
         view
@@ -109,6 +137,14 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(msgPayload, options);
     }
 
+    /**
+     * @notice Builds the message and options for a confidential OFT send
+     * @dev Specific implementation for confidential transfers
+     * @param params Parameters for the confidential send
+     * @param cMsg Encoded confidential message
+     * @return typedMessage Encoded message with type prefix
+     * @return options Encoded options
+     */
     function _buildMsgAndOptions(CSendParams calldata params, bytes memory cMsg)
         internal
         view
@@ -121,6 +157,15 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(typedMessage, options);
     }
 
+    /**
+     * @notice Handles received LayerZero messages
+     * @dev Routes messages based on type (standard OFT or confidential)
+     * @param origin Origin information
+     * @param guid Global unique identifier
+     * @param message The received message
+     * @param executor The executor address
+     * @param extraData Additional data
+     */
     function _lzReceive(
         Origin calldata origin,
         bytes32 guid,

@@ -5,6 +5,13 @@ include "circomlib/circuits/comparators.circom";
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title Update
+ * @notice Handles deposits (public -> confidential) and withdrawals (confidential -> public).
+ * @dev Validates the operation type (0=Deposit, 1=Withdraw).
+ *      For withdrawals, ensures the user has sufficient confidential balance.
+ *      Updates the user's confidential state (amount and nonce).
+ */
 template Update() {
     // --- Private Inputs ---
     signal input cPrivateKey;
@@ -45,6 +52,10 @@ template Update() {
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
 
+    // Calculate the new confidential amount based on operation type:
+    // If operation = 0 (Deposit): newAmount = oldAmount + amount
+    // If operation = 1 (Withdraw): newAmount = oldAmount - amount
+    // Formula: oldAmount + (1 - 2*operation) * amount
     var newNonce = oldNonce + 1;
     var newAmount = oldAmount + (1 - 2*operation) * amount;
 

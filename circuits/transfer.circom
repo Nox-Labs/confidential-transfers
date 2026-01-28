@@ -8,6 +8,14 @@ include "./utils/SharedKeyGenerator.circom";
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title Transfer
+ * @notice Processes a transfer of confidential assets from the sender to a recipient.
+ * @dev 1. Verifies the sender's current state (oldCommitment) and sufficient balance.
+ *      2. Generates the sender's new state (decreased amount, incremented nonce).
+ *      3. Computes a shared secret (ECDH) between sender and recipient.
+ *      4. Uses the shared secret to create a transfer package (commitment, eAmount) for the recipient.
+ */
 template Transfer() {
   // --- Private Inputs ---
   signal input cPrivateKey;
@@ -28,22 +36,24 @@ template Transfer() {
   signal output transferCommitment;
   signal output transferEAmount;
 
-  component oldStateChecker = OldStateChecker();
-  oldStateChecker.key <== cPrivateKey;
-  oldStateChecker.chainId <== chainId;
-  oldStateChecker.contractAddress <== contractAddress;
-  oldStateChecker.oldAmount <== oldAmount;
-  oldStateChecker.oldNonce <== oldNonce;
-  oldStateChecker.oldCommitment <== oldCommitment;  
+    // Verify that the sender knows the private key for the current state (oldCommitment)
+    component oldStateChecker = OldStateChecker();
+    oldStateChecker.key <== cPrivateKey;
+    oldStateChecker.chainId <== chainId;
+    oldStateChecker.contractAddress <== contractAddress;
+    oldStateChecker.oldAmount <== oldAmount;
+    oldStateChecker.oldNonce <== oldNonce;
+    oldStateChecker.oldCommitment <== oldCommitment;  
 
-  // Assert enough balance
-  component checkEnoughBalance = LessEqThan(252);
-  checkEnoughBalance.in[0] <== transferAmount;
-  checkEnoughBalance.in[1] <== oldAmount;
-  checkEnoughBalance.out === 1;
+    // Assert that the sender has enough confidential balance for the transfer
+    component checkEnoughBalance = LessEqThan(252);
+    checkEnoughBalance.in[0] <== transferAmount;
+    checkEnoughBalance.in[1] <== oldAmount;
+    checkEnoughBalance.out === 1;
 
-  var newNonce = oldNonce + 1;
-  var newAmount = oldAmount - transferAmount;
+    // Calculate new state properties
+    var newNonce = oldNonce + 1;
+    var newAmount = oldAmount - transferAmount;
 
   component newStateGenerator = NewStateGenerator();
   newStateGenerator.key <== cPrivateKey;

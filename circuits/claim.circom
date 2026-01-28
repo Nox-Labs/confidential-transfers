@@ -6,6 +6,13 @@ include "circomlib/circuits/comparators.circom";
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title Claim
+ * @notice Allows a sender to reclaim funds from a failed cross-chain transfer.
+ * @dev Verifies that the user was the original sender of the failed transfer.
+ *      Reconstructs the transfer commitment using the recipient's public key and the original transfer parameters.
+ *      Updates the sender's balance by adding the reclaimed amount back.
+ */
 template Claim() {
     // --- Private Inputs ---
     signal input cPrivateKey;

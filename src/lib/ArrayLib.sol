@@ -77,17 +77,16 @@ library ArrayLib {
         if (self.length == 0) return;
         if (self.length > auditReports.length) revert NotFound();
 
-        bool[] memory found = new bool[](self.length);
         for (uint256 i = 0; i < self.length; i++) {
+            bool found = false;
             for (uint256 j = 0; j < auditReports.length; j++) {
                 if (self[i] == auditReports[j].auditor) {
-                    found[i] = true;
+                    found = true;
                     break;
                 }
             }
-        }
-        for (uint256 i = 0; i < auditReports.length; i++) {
-            if (!found[i]) revert NotFound();
+
+            if (!found) revert NotFound();
         }
     }
 }

@@ -3,11 +3,12 @@ pragma circom 2.1.5;
 include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/escalarmulany.circom";
 
-// ECDH Is a a template which allows to generate a shared secret
-// from a private key and a public key on the baby jubjub curve
-// It is important that the private key is hashed and pruned first
-// which can be accomplished using the function
-// deriveSecretScalar from @zk-kit/eddsa-poseidon.
+/**
+ * @title ECDH
+ * @notice Elliptic Curve Diffie-Hellman (ECDH) on Baby Jubjub curve.
+ * @dev Computes a shared secret point from a private key and a public key.
+ *      SharedSecret = privateKey * PublicKey (scalar multiplication)
+ */
 template ECDH() {
     // the private key must pass through deriveScalar first
     signal input privateKey;
@@ -30,6 +31,11 @@ template ECDH() {
     sharedKey_Y <== mulFix[1];
 }
 
+/**
+ * @title SharedKeyGenerator
+ * @notice Wrapper around ECDH to produce a single field element shared key.
+ * @dev Uses ECDH to compute the shared point, then takes the X coordinate as the shared key.
+ */
 template SharedKeyGenerator() {
     signal input privateKey;
     signal input publicKey_X;

@@ -8,6 +8,15 @@ include "./utils/SharedKeyGenerator.circom";
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
 
+/**
+ * @title ApplyAndTransfer
+ * @notice Combines applying pending transfers and sending a new transfer in a single proof.
+ * @dev Optimizes gas and proof generation by performing two operations (Apply + Transfer) at once.
+ *      1. Updates balance by applying pending transfers.
+ *      2. Checks if sufficient balance exists for the outgoing transfer.
+ *      3. Generates the new state for the sender and the transfer package for the recipient.
+ * @param max Maximum number of pending transfers that can be processed.
+ */
 template ApplyAndTransfer(max) {
   // --- Private Inputs ---
   signal input cPrivateKey;
