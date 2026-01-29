@@ -2,6 +2,8 @@
 
 The Confidential Transfers SDK is a TypeScript library that provides a set of functions to interact with the ERC20 Confidential Transfers extension.
 
+- [Npm package](https://www.npmjs.com/package/@noxlabs/confidential-transfers-sdk)
+
 ## Installation
 
 1. Install the package:

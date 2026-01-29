@@ -1,6 +1,6 @@
 {
   "name": "@noxlabs/confidential-transfers-sdk",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "SDK for EVM ERC20 Confidential Transfers",
   "author": "Nox Labs",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@noxlabs/confidential-transfers",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "type": "module",
   "files": [
     "src",

@@ -1,9 +1,5 @@
 # ERC20 Confidential Transfers
 
-[![Solidity](https://img.shields.io/badge/Solidity-^0.8.28-blue.svg)](https://soliditylang.org/)
-[![Hardhat](https://img.shields.io/badge/Hardhat-^3.0-blue.svg)](https://hardhat.org/)
-[![Foundry](https://img.shields.io/badge/Foundry-blue.svg)](https://getfoundry.sh/)
-
 This project is a proof-of-concept implementation of confidential transfers for ERC20-like tokens on Ethereum Virtual Machine (EVM) compatible blockchains. It leverages zk-SNARKs (PLONK) to enable privacy-preserving transactions, allowing users to transfer tokens without revealing the amounts on-chain while keeping the link between sender and receiver private.
 
 ## How It Works
@@ -133,3 +129,4 @@ For more detailed information, check the `docs/` directory:
 - [Technical Specification](docs/TechnicalSpecification.md)
 - [Integration Guidelines](docs/GUIDELINE.md)
 - [Custody Guidelines](docs/CustodyIntegration.md)
+- [Npm package](https://www.npmjs.com/package/@noxlabs/confidential-transfers)
