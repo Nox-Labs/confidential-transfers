@@ -1,0 +1,19 @@
+# Compiler files
+cache/
+out/
+
+broadcast/
+coverage/
+
+.env
+
+node_modules/
+
+# Proofs for cold tests
+test/utils/script/proofs/
+
+# ptau
+powersOfTau28_hez_final_16.ptau
+
+# MacOs
+.DS_Store

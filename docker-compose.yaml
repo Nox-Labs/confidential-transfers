@@ -1,0 +1,18 @@
+services:
+  anvil:
+    image: ghcr.io/foundry-rs/foundry
+    container_name: anvil
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+    ports:
+      - '8545:8545'
+    command: anvil
+    working_dir: /anvil
+  playground:
+    image: ghcr.io/nox-labs/solidity-toolbox:0.1
+    volumes:
+      - ./:/workspace
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
+    working_dir: /workspace
