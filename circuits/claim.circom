@@ -44,8 +44,8 @@ template Claim() {
 
     component sharedKeyGenerator = SharedKeyGenerator();
     sharedKeyGenerator.privateKey <== cPrivateKeyUsedInTransfer;
-    sharedKeyGenerator.publicKey_X <== recipientPublicKeyX;
-    sharedKeyGenerator.publicKey_Y <== recipientPublicKeyY;
+    sharedKeyGenerator.publicKeyX <== recipientPublicKeyX;
+    sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
     signal sharedKey <== sharedKeyGenerator.sharedKey;
 
     component pendingTransferOTKGenerator = OTKGenerator();

@@ -98,8 +98,8 @@ template ApplyAndTransfer(max) {
   // Calculate shared key 
   component sharedKeyGenerator = SharedKeyGenerator();
   sharedKeyGenerator.privateKey <== cPrivateKey;
-  sharedKeyGenerator.publicKey_X <== recipientPublicKeyX;
-  sharedKeyGenerator.publicKey_Y <== recipientPublicKeyY;
+  sharedKeyGenerator.publicKeyX <== recipientPublicKeyX;
+  sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
   signal sharedKey <== sharedKeyGenerator.sharedKey;
 
   component transferStateGenerator = NewStateGenerator();

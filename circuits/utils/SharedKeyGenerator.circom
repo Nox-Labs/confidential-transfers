@@ -12,11 +12,11 @@ include "circomlib/circuits/escalarmulany.circom";
 template ECDH() {
     // the private key must pass through deriveScalar first
     signal input privateKey;
-    signal input publicKey_X;
-    signal input publicKey_Y;
+    signal input publicKeyX;
+    signal input publicKeyY;
 
-    signal output sharedKey_X;
-    signal output sharedKey_Y;
+    signal output sharedKeyX;
+    signal output sharedKeyY;
 
     // convert the private key to its bits representation
     var out[254];
@@ -24,11 +24,11 @@ template ECDH() {
 
     // multiply the public key by the private key
     var mulFix[2];
-    mulFix = EscalarMulAny(254)(out, [publicKey_X, publicKey_Y]);
+    mulFix = EscalarMulAny(254)(out, [publicKeyX, publicKeyY]);
 
     // we can then wire the output to the shared secret signal
-    sharedKey_X <== mulFix[0];
-    sharedKey_Y <== mulFix[1];
+    sharedKeyX <== mulFix[0];
+    sharedKeyY <== mulFix[1];
 }
 
 /**
@@ -38,14 +38,14 @@ template ECDH() {
  */
 template SharedKeyGenerator() {
     signal input privateKey;
-    signal input publicKey_X;
-    signal input publicKey_Y;
+    signal input publicKeyX;
+    signal input publicKeyY;
 
     signal output sharedKey;
 
     component ecdh = ECDH();
     ecdh.privateKey <== privateKey;
-    ecdh.publicKey_X <== publicKey_X;
-    ecdh.publicKey_Y <== publicKey_Y;
-    sharedKey <== ecdh.sharedKey_X;
+    ecdh.publicKeyX <== publicKeyX;
+    ecdh.publicKeyY <== publicKeyY;
+    sharedKey <== ecdh.sharedKeyX;
 }
