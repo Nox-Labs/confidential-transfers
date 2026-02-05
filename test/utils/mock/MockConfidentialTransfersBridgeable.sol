@@ -68,7 +68,7 @@ contract MockConfidentialTransfersBridgeable is ERC20, ConfidentialTransfersBrid
         );
     }
 
-    function _cTransfer(address from, address to, uint256 amount) internal override {
+    function _cPublicTransfer(address from, address to, uint256 amount) internal override {
         _transfer(from, to, amount);
     }
 
@@ -79,4 +79,6 @@ contract MockConfidentialTransfersBridgeable is ERC20, ConfidentialTransfersBrid
     function _cMint(uint256 amount) internal override {
         _mint(address(this), amount);
     }
+
+    function _authorizeCMintAndCBurn(address account, uint8) internal virtual override onlyOwner {}
 }

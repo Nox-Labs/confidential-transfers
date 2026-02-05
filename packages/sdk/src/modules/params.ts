@@ -13,7 +13,7 @@ import { Auditors } from "./auditors.js"
 export class Params extends Auditors {
   getInitParams(
     output: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): InitParamsStruct {
     return {
       stateAuditReports: stateAuditReports ?? [],
@@ -24,16 +24,30 @@ export class Params extends Auditors {
     }
   }
 
+  getMintParams(
+    proofOutput: ProofOutput,
+    stateAuditReports?: AuditReportStruct[]
+  ): UpdateParamsStruct {
+    return this.getUpdateParams(proofOutput, stateAuditReports)
+  }
+
+  getBurnParams(
+    proofOutput: ProofOutput,
+    stateAuditReports?: AuditReportStruct[]
+  ): UpdateParamsStruct {
+    return this.getUpdateParams(proofOutput, stateAuditReports)
+  }
+
   getWithdrawParams(
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): UpdateParamsStruct {
     return this.getUpdateParams(proofOutput, stateAuditReports)
   }
 
   getDepositParams(
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): UpdateParamsStruct {
     return this.getUpdateParams(proofOutput, stateAuditReports)
   }
@@ -41,7 +55,7 @@ export class Params extends Auditors {
   getApplyParams(
     pendingTransfersIndexes: number[],
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): ApplyParamsStruct {
     return {
       pendingTransfersIndexes,
@@ -58,7 +72,7 @@ export class Params extends Auditors {
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
     transferAuditReports?: AuditReportStruct[],
-    extraData?: string,
+    extraData?: string
   ): TransferParamsStruct {
     return {
       recipient: recipientAddress,
@@ -78,7 +92,7 @@ export class Params extends Auditors {
     proofOutput: ProofOutput,
     stateAuditReports?: AuditReportStruct[],
     transferAuditReports?: AuditReportStruct[],
-    extraData?: string,
+    extraData?: string
   ): ApplyAndTransferParamsStruct {
     return {
       recipient: recipientAddress,
@@ -96,7 +110,7 @@ export class Params extends Auditors {
   getClaimParams(
     indexToClaim: number,
     proofOutput: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): ClaimParamsStruct {
     return {
       indexToClaim,
@@ -110,7 +124,7 @@ export class Params extends Auditors {
 
   private getUpdateParams(
     output: ProofOutput,
-    stateAuditReports?: AuditReportStruct[],
+    stateAuditReports?: AuditReportStruct[]
   ): UpdateParamsStruct {
     return {
       amount: output.pubSignals[5],

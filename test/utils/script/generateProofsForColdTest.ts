@@ -4,6 +4,8 @@ import {
   DEPOSIT_AMOUNT,
   WITHDRAW_AMOUNT,
   TRANSFER_AMOUNT,
+  MINT_AMOUNT,
+  BURN_AMOUNT,
 } from "./getProofFilenameForColdTest.js"
 import { baseSetupBridgeableUninitializedUsers } from "../../hardhat/BaseSetup.js"
 import * as fs from "fs"
@@ -31,6 +33,12 @@ async function generateAndSaveProofs() {
 
     // --- 3.1 Withdraw Proof ---
     await withdraw(false)
+
+    // --- 3.3 Mint Proof user1 ---
+    await mint(false)
+
+    // --- 3.4 Burn Proof user1 ---
+    await burn(false)
   }
 
   // --- 4. Transfer Proof ---
@@ -42,6 +50,12 @@ async function generateAndSaveProofs() {
     // --- 4.1 Withdraw Proof ---
     await withdraw(false)
 
+    // --- 4.3 Mint Proof user1 ---
+    await mint(false)
+
+    // --- 4.4 Burn Proof user1 ---
+    await burn(false)
+
     // --- 4.1 Apply and Transfer Proof ---
     await applyAndTransfer(false, [0])
 
@@ -52,7 +66,7 @@ async function generateAndSaveProofs() {
         "transfer",
         user1.index,
         nonce - 1n,
-        TRANSFER_AMOUNT,
+        TRANSFER_AMOUNT
       )
       const proof = getProofOutput(filename)
       const pt = {
@@ -70,7 +84,7 @@ async function generateAndSaveProofs() {
         .addFailedCrossChainTransfer(
           recipientAccount.pubKeyX,
           recipientAccount.pubKeyY,
-          pt,
+          pt
         )
       await claim(false, 0)
     }
@@ -92,16 +106,16 @@ async function generateAndSaveProofs() {
         user2.index,
         await getNonce(user2),
         undefined,
-        indexes,
+        indexes
       )
       if (!isFileExists(filename) || execute) {
         const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-          BigInt(user2.privateKey),
+          BigInt(user2.privateKey)
         )
         const ai = await sdk.getCircuitInputsForApply(
           user2.address,
           cPrivateKey,
-          indexes,
+          indexes
         )
 
         ai.pendingTransfersCommitments[1] = ai.pendingTransfersCommitments[0]
@@ -147,11 +161,11 @@ async function init(execute: boolean, user: typeof user1) {
   const filename = getProofFilenameForColdTest(
     "init",
     user.index,
-    await getNonce(user),
+    await getNonce(user)
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user.privateKey),
+    BigInt(user.privateKey)
   )
   const initInputs = await sdk.getCircuitInputsForInit(cPrivateKey)
   let initProofOutput: ProofOutput
@@ -171,19 +185,19 @@ async function transfer(execute: boolean) {
     "transfer",
     user1.index,
     await getNonce(user1),
-    TRANSFER_AMOUNT,
+    TRANSFER_AMOUNT
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey),
+    BigInt(user1.privateKey)
   )
   const transferInputs = await sdk.getCircuitInputsForTransfer(
     user1.address,
     cPrivateKey,
     user2.address,
-    TRANSFER_AMOUNT,
+    TRANSFER_AMOUNT
   )
   let transferProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -193,7 +207,7 @@ async function transfer(execute: boolean) {
   }
   const transferParams = sdk.getTransferParams(
     user2.address,
-    transferProofOutput,
+    transferProofOutput
   )
   if (execute) await token.connect(user1).cTransfer(transferParams)
   saveProofToFile(filename, transferProofOutput)
@@ -204,18 +218,18 @@ async function deposit(execute: boolean) {
     "deposit",
     user1.index,
     await getNonce(user1),
-    DEPOSIT_AMOUNT,
+    DEPOSIT_AMOUNT
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey),
+    BigInt(user1.privateKey)
   )
   const depositInputs = await sdk.getCircuitInputsForDeposit(
     user1.address,
     cPrivateKey,
-    DEPOSIT_AMOUNT,
+    DEPOSIT_AMOUNT
   )
   let depositProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -233,18 +247,18 @@ async function withdraw(execute: boolean) {
     "withdraw",
     user1.index,
     await getNonce(user1),
-    WITHDRAW_AMOUNT,
+    WITHDRAW_AMOUNT
   )
 
   if (isFileExists(filename) && !execute) return
 
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey),
+    BigInt(user1.privateKey)
   )
   const withdrawInputs = await sdk.getCircuitInputsForWithdraw(
     user1.address,
     cPrivateKey,
-    WITHDRAW_AMOUNT,
+    WITHDRAW_AMOUNT
   )
   let withdrawProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -257,22 +271,80 @@ async function withdraw(execute: boolean) {
   saveProofToFile(filename, withdrawProofOutput)
 }
 
+async function mint(execute: boolean) {
+  const filename = getProofFilenameForColdTest(
+    "mint",
+    user1.index,
+    await getNonce(user1),
+    MINT_AMOUNT
+  )
+
+  if (isFileExists(filename) && !execute) return
+
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+    BigInt(user1.privateKey)
+  )
+  const mintInputs = await sdk.getCircuitInputsForMint(
+    user1.address,
+    cPrivateKey,
+    MINT_AMOUNT
+  )
+  let mintProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    mintProofOutput = getProofOutput(filename)
+  } else {
+    mintProofOutput = await sdk.generateUpdateProof(mintInputs)
+  }
+  const mintParams = sdk.getMintParams(mintProofOutput)
+  if (execute) await token.connect(user1).cMint(mintParams)
+  saveProofToFile(filename, mintProofOutput)
+}
+
+async function burn(execute: boolean) {
+  const filename = getProofFilenameForColdTest(
+    "burn",
+    user1.index,
+    await getNonce(user1),
+    BURN_AMOUNT
+  )
+
+  if (isFileExists(filename) && !execute) return
+
+  const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+    BigInt(user1.privateKey)
+  )
+  const burnInputs = await sdk.getCircuitInputsForBurn(
+    user1.address,
+    cPrivateKey,
+    BURN_AMOUNT
+  )
+  let burnProofOutput: ProofOutput
+  if (isFileExists(filename)) {
+    burnProofOutput = getProofOutput(filename)
+  } else {
+    burnProofOutput = await sdk.generateUpdateProof(burnInputs)
+  }
+  const burnParams = sdk.getBurnParams(burnProofOutput)
+  if (execute) await token.connect(user1).cBurn(burnParams)
+  saveProofToFile(filename, burnProofOutput)
+}
+
 async function apply(execute: boolean, indexes: number[]) {
   const filename = getProofFilenameForColdTest(
     "apply",
     user2.index,
     await getNonce(user2),
     undefined,
-    indexes,
+    indexes
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey),
+    BigInt(user2.privateKey)
   )
   const applyInputs = await sdk.getCircuitInputsForApply(
     user2.address,
     cPrivateKey,
-    indexes,
+    indexes
   )
   let applyProofOutput: ProofOutput
   if (isFileExists(filename)) {
@@ -291,31 +363,31 @@ async function applyAndTransfer(execute: boolean, indexes: number[]) {
     user2.index,
     await getNonce(user2),
     undefined,
-    indexes,
+    indexes
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey),
+    BigInt(user2.privateKey)
   )
   const applyAndTransferInputs = await sdk.getCircuitInputsForApplyAndTransfer(
     user2.address,
     cPrivateKey,
     indexes,
     user1.address,
-    TRANSFER_AMOUNT,
+    TRANSFER_AMOUNT
   )
   let applyAndTransferProofOutput: ProofOutput
   if (isFileExists(filename)) {
     applyAndTransferProofOutput = getProofOutput(filename)
   } else {
     applyAndTransferProofOutput = await sdk.generateApplyAndTransferProof(
-      applyAndTransferInputs,
+      applyAndTransferInputs
     )
   }
   const applyAndTransferParams = sdk.getApplyAndTransferParams(
     user1.address,
     indexes,
-    applyAndTransferProofOutput,
+    applyAndTransferProofOutput
   )
   if (execute)
     await token.connect(user2).cApplyAndTransfer(applyAndTransferParams)
@@ -326,16 +398,16 @@ async function claim(execute: boolean, indexToClaim: number) {
   const filename = getProofFilenameForColdTest(
     "claim",
     user1.index,
-    await getNonce(user1),
+    await getNonce(user1)
   )
   if (isFileExists(filename) && !execute) return
   const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey),
+    BigInt(user1.privateKey)
   )
   const claimInputs = await sdk.getCircuitInputsForClaim(
     user1.address,
     cPrivateKey,
-    indexToClaim,
+    indexToClaim
   )
   // claimInputs.pendingTransferAmount = TRANSFER_AMOUNT
   let claimProofOutput: ProofOutput
@@ -358,7 +430,7 @@ function saveProofToFile(filename: string, data: ProofOutput) {
   const jsonString = JSON.stringify(
     data,
     (_, value) => (typeof value === "bigint" ? value.toString() : value),
-    2,
+    2
   )
   fs.writeFileSync(filePath, jsonString)
   console.log(`- Saved ${filename}.json`)

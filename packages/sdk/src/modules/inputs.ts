@@ -18,7 +18,7 @@ export class Inputs extends Token {
    * @returns
    */
   async getCircuitInputsForInit(
-    cPrivateKey: bigint,
+    cPrivateKey: bigint
   ): Promise<CircuitInitInputs> {
     return {
       ...(await this.getTarget()),
@@ -26,29 +26,55 @@ export class Inputs extends Token {
     }
   }
 
-  async getCircuitInputsForDeposit(
+  async getCircuitInputsForMint(
     account: string,
     cPrivateKey: bigint,
-    amount: bigint,
+    amount: bigint
   ): Promise<CircuitUpdateInputs> {
     return await this.getCircuitInputsForUpdate(
       account,
       cPrivateKey,
       0n,
-      amount,
+      amount
+    )
+  }
+
+  async getCircuitInputsForBurn(
+    account: string,
+    cPrivateKey: bigint,
+    amount: bigint
+  ): Promise<CircuitUpdateInputs> {
+    return await this.getCircuitInputsForUpdate(
+      account,
+      cPrivateKey,
+      1n,
+      amount
+    )
+  }
+
+  async getCircuitInputsForDeposit(
+    account: string,
+    cPrivateKey: bigint,
+    amount: bigint
+  ): Promise<CircuitUpdateInputs> {
+    return await this.getCircuitInputsForUpdate(
+      account,
+      cPrivateKey,
+      0n,
+      amount
     )
   }
 
   async getCircuitInputsForWithdraw(
     account: string,
     cPrivateKey: bigint,
-    amount: bigint,
+    amount: bigint
   ): Promise<CircuitUpdateInputs> {
     return await this.getCircuitInputsForUpdate(
       account,
       cPrivateKey,
       1n,
-      amount,
+      amount
     )
   }
 
@@ -56,7 +82,7 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     to: string,
-    transferAmount: bigint,
+    transferAmount: bigint
   ): Promise<CircuitTransferInputs> {
     const senderAccountData = await this.token.getAccount(account)
 
@@ -65,7 +91,7 @@ export class Inputs extends Token {
     const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
-      senderAccountData.state.eAmount,
+      senderAccountData.state.eAmount
     )
 
     const { pubKeyX, pubKeyY } = await this.token.getAccount(to)
@@ -85,11 +111,11 @@ export class Inputs extends Token {
   async getCircuitInputsForApply(
     account: string,
     cPrivateKey: bigint,
-    pendingTransfersIndexes: number[],
+    pendingTransfersIndexes: number[]
   ): Promise<CircuitApplyInputs> {
     if (pendingTransfersIndexes.length > this.MAX_PENDING_TRANSFERS_APPLY)
       throw new Error(
-        `Max pending transfers apply is ${this.MAX_PENDING_TRANSFERS_APPLY}`,
+        `Max pending transfers apply is ${this.MAX_PENDING_TRANSFERS_APPLY}`
       )
 
     const senderAccountData = await this.token.getAccount(account)
@@ -99,15 +125,15 @@ export class Inputs extends Token {
     const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
-      senderAccountData.state.eAmount,
+      senderAccountData.state.eAmount
     )
 
     const filteredPendingTransfers = senderAccountData.pendingTransfers.filter(
-      (_, index) => pendingTransfersIndexes.includes(index),
+      (_, index) => pendingTransfersIndexes.includes(index)
     )
 
     const { pubKeyXs, pubKeyYs } = await this.token.getCPublicKeys(
-      filteredPendingTransfers.map((transfer) => transfer.sender),
+      filteredPendingTransfers.map((transfer) => transfer.sender)
     )
 
     const decryptedAmountsWithOTKs = await Promise.all(
@@ -117,19 +143,19 @@ export class Inputs extends Token {
         const sharedKey = await Token.deriveSharedKey(
           cPrivateKey,
           pubKeyX,
-          pubKeyY,
+          pubKeyY
         )
 
         const amount = await this.decryptAmount(
           sharedKey,
           transfer.payload.nonce,
-          transfer.payload.eAmount,
+          transfer.payload.eAmount
         )
 
         const otk = await this.generateOTK(sharedKey, transfer.payload.nonce)
 
         return { amount, otk }
-      }),
+      })
     )
 
     const MAX = this.MAX_PENDING_TRANSFERS_APPLY
@@ -137,7 +163,7 @@ export class Inputs extends Token {
     const pendingTransfersCommitments = Array(MAX).fill(0n)
     for (let i = 0; i < filteredPendingTransfers.length; i++)
       pendingTransfersCommitments[i] = BigInt(
-        filteredPendingTransfers[i].payload.commitment,
+        filteredPendingTransfers[i].payload.commitment
       )
 
     const pendingTransfersAmounts = Array(MAX).fill(0n)
@@ -166,19 +192,19 @@ export class Inputs extends Token {
     cPrivateKey: bigint,
     pendingTransfersIndexes: number[],
     to: string,
-    transferAmount: bigint,
+    transferAmount: bigint
   ): Promise<CircuitApplyAndTransferInputs> {
     return {
       ...(await this.getCircuitInputsForApply(
         account,
         cPrivateKey,
-        pendingTransfersIndexes,
+        pendingTransfersIndexes
       )),
       ...(await this.getCircuitInputsForTransfer(
         account,
         cPrivateKey,
         to,
-        transferAmount,
+        transferAmount
       )),
     }
   }
@@ -187,7 +213,7 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     indexToClaim: number,
-    cPrivateKeyUsedInTransfer?: bigint,
+    cPrivateKeyUsedInTransfer?: bigint
   ): Promise<CircuitClaimInputs> {
     cPrivateKeyUsedInTransfer = cPrivateKeyUsedInTransfer ?? cPrivateKey
 
@@ -207,19 +233,19 @@ export class Inputs extends Token {
     const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
-      accountData.state.eAmount,
+      accountData.state.eAmount
     )
 
     const sharedKey = await Token.deriveSharedKey(
       cPrivateKeyUsedInTransfer,
       transferToClaim.recipientPubKeyX,
-      transferToClaim.recipientPubKeyY,
+      transferToClaim.recipientPubKeyY
     )
 
     const pendingAmount = await this.decryptAmount(
       sharedKey,
       transferToClaim.pendingTransfer.payload.nonce,
-      transferToClaim.pendingTransfer.payload.eAmount,
+      transferToClaim.pendingTransfer.payload.eAmount
     )
 
     return {
@@ -242,7 +268,7 @@ export class Inputs extends Token {
     account: string,
     cPrivateKey: bigint,
     operation: bigint,
-    amount: bigint,
+    amount: bigint
   ): Promise<CircuitUpdateInputs> {
     const accountData = await this.token.getAccount(account)
 
@@ -251,7 +277,7 @@ export class Inputs extends Token {
     const oldAmount = await this.decryptAmount(
       cPrivateKey,
       oldNonce,
-      accountData.state.eAmount,
+      accountData.state.eAmount
     )
 
     return {

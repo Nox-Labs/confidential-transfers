@@ -13,6 +13,10 @@ import {
 import {PlonkVerifier as ClaimPlonkVerifier} from "./verifiers/ClaimPlonkVerifier.sol";
 
 import {ArrayLib} from "./lib/ArrayLib.sol";
+import {
+    ConfidentialTransfersBridgeableZKVerificationLib
+} from "./lib/ConfidentialTransfersBridgeableZKVerificationLib.sol";
+import {ConfidentialTransfersZKVerificationLib} from "./lib/ConfidentialTransfersZKVerificationLib.sol";
 
 /**
  * @title ConfidentialTransfersBridgeable
@@ -21,6 +25,8 @@ import {ArrayLib} from "./lib/ArrayLib.sol";
  *      Designed to work with a bridge adapter (like LayerZero OFT).
  */
 abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, IConfidentialTransfersBridgeable {
+    using ConfidentialTransfersZKVerificationLib for *;
+    using ConfidentialTransfersBridgeableZKVerificationLib for *;
     using ArrayLib for uint256[];
     using ArrayLib for FailedCrossChainTransfer[];
 
@@ -85,9 +91,15 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     {
         Payload memory pendingTransferPayload;
 
-        (newState, pendingTransferPayload) = _transfer(transferParams);
+        ConfidentialTransfersStorage storage $ = _getCStorage();
 
-        _getCStorage().accounts[msg.sender].state = newState;
+        Account storage account = $.accounts[msg.sender];
+        Account storage recipientAccount = $.accounts[transferParams.recipient];
+
+        (newState, pendingTransferPayload) = $.transferVerifier.cTransfer(transferParams, account, recipientAccount);
+
+        account.state = newState;
+        account.auditReports = transferParams.stateAuditReports;
 
         pendingTransfer = PendingTransfer(msg.sender, pendingTransferPayload, transferParams.transferAuditReports);
 
@@ -198,51 +210,18 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     {
         ConfidentialTransfersBridgeableStorage storage $ = _getCStorageBridgeable();
 
-        Payload memory newState = _claim(claimParams);
-
         Account storage account = _getCStorage().accounts[msg.sender];
+
+        Payload memory newState = ConfidentialTransfersBridgeableZKVerificationLib.cClaim(
+            $.claimVerifier, claimParams, account, $.failedCrossChainTransfers[msg.sender][claimParams.indexToClaim]
+        );
+
         account.state = newState;
         account.auditReports = claimParams.stateAuditReports;
 
         $.failedCrossChainTransfers[msg.sender].remove(claimParams.indexToClaim);
 
         emit CFailedTransferClaimed(msg.sender, newState, account.auditReports);
-    }
-
-    /**
-     * @notice Internal logic for claiming a failed transfer
-     * @dev Verifies proof and generates new state
-     * @param params Claim parameters
-     * @return newState New state of the sender
-     */
-    function _claim(ClaimParams calldata params)
-        internal
-        view
-        checkArrayLength(2, params.artifacts.outputs.length)
-        returns (Payload memory newState)
-    {
-        FailedCrossChainTransfer storage failedTransfer = _getCStorageBridgeable()
-        .failedCrossChainTransfers[msg.sender][params.indexToClaim];
-
-        Account storage account = _getCStorage().accounts[msg.sender];
-
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
-        uint256[10] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
-            block.chainid,
-            uint160(address(this)),
-            account.state.nonce,
-            account.state.commitment,
-            failedTransfer.pendingTransfer.payload.nonce,
-            failedTransfer.pendingTransfer.payload.commitment,
-            failedTransfer.recipientPubKeyX,
-            failedTransfer.recipientPubKeyY
-        ];
-
-        if (!_getCStorageBridgeable().claimVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
-
-        newState = Payload({nonce: account.state.nonce + 1, commitment: pubSignals[0], eAmount: pubSignals[1]});
     }
 
     /**

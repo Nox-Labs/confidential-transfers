@@ -100,6 +100,8 @@ interface IConfidentialTransfers {
     event CInitialized(
         address indexed account, uint256 pubKeyX, uint256 pubKeyY, Payload newState, AuditReport[] auditReports
     );
+    event CMinted(address indexed account, Payload newState, AuditReport[] auditReports);
+    event CBurned(address indexed account, Payload newState, AuditReport[] auditReports);
     event CDeposited(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
     event CWithdrawn(address indexed account, uint256 amount, Payload newState, AuditReport[] auditReports);
     event CApplied(address indexed account, Payload newState, AuditReport[] auditReports);

@@ -62,7 +62,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         _mint(address(this), amount);
     }
 
-    function _cTransfer(address from, address to, uint256 amount) internal override {
+    function _cPublicTransfer(address from, address to, uint256 amount) internal override {
         _transfer(from, to, amount);
     }
 
@@ -184,5 +184,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
             revert InvalidMessageType();
         }
     }
+
+    function _authorizeCMintAndCBurn(address account, uint8) internal virtual override onlyOwner {}
 }
 

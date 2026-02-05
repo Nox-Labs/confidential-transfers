@@ -35,7 +35,9 @@ contract MockConfidentialTransfers is ERC20, ConfidentialTransfers, Ownable {
         _mint(account, amount);
     }
 
-    function _cTransfer(address from, address to, uint256 amount) internal override {
+    function _cPublicTransfer(address from, address to, uint256 amount) internal override {
         _transfer(from, to, amount);
     }
+
+    function _authorizeCMintAndCBurn(address account, uint8) internal virtual override onlyOwner {}
 }

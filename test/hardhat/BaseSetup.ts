@@ -7,6 +7,8 @@ import {
   DEPOSIT_AMOUNT,
   WITHDRAW_AMOUNT,
   TRANSFER_AMOUNT,
+  MINT_AMOUNT,
+  BURN_AMOUNT,
   type Operation,
 } from "../utils/script/getProofFilenameForColdTest.js"
 import { BaseWallet } from "ethers"
@@ -34,7 +36,7 @@ async function setup(
     | "ConfidentialTransfers"
     | "ConfidentialTransfersBridgeable"
     | "ConfidentialOFT",
-  isMockVerifier: boolean,
+  isMockVerifier: boolean
 ) {
   const { ethers, networkHelpers } = conn
   const INITIAL_BALANCE = ethers.parseEther("1000")
@@ -68,7 +70,7 @@ async function setup(
 
   const token = (await ethers.deployContract(
     `Mock${target}`,
-    params,
+    params
   )) as unknown as ConfidentialOFT &
     ConfidentialTransfersBridgeable &
     ConfidentialTransfers & {
@@ -77,7 +79,7 @@ async function setup(
       transferFrom: (
         from: string,
         to: string,
-        amount: bigint,
+        amount: bigint
       ) => Promise<boolean>
       name: () => Promise<string>
       symbol: () => Promise<string>
@@ -92,7 +94,7 @@ async function setup(
   const PoseidonFactory = new ethers.ContractFactory(
     circomlibjs.poseidonContract.generateABI(2),
     C2Code,
-    await ethers.provider.getSigner(),
+    await ethers.provider.getSigner()
   )
 
   const poseidonCircomLib = await buildPoseidon()
@@ -107,7 +109,7 @@ async function setup(
     new ethers.Wallet(pk.user0, ethers.provider),
     {
       index: 0,
-    },
+    }
   )
   const user1 = Object.assign(new ethers.Wallet(pk.user1, ethers.provider), {
     index: 1,
@@ -116,12 +118,12 @@ async function setup(
     new ethers.Wallet(pk.user2, ethers.provider),
     {
       index: 2,
-    },
+    }
   )
 
   await networkHelpers.setBalance(
     userUninitialized.address,
-    ethers.parseEther("10000"),
+    ethers.parseEther("10000")
   )
   await networkHelpers.setBalance(user1.address, ethers.parseEther("10000"))
   await networkHelpers.setBalance(user2.address, ethers.parseEther("10000"))
@@ -140,21 +142,21 @@ async function setup(
 
   const cInit = async (
     _type: "hot" | "cold",
-    user: typeof user1,
+    user: typeof user1
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateInitProof(
-        await sdk.getCircuitInputsForInit(cPrivateKey),
+        await sdk.getCircuitInputsForInit(cPrivateKey)
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "init",
         user.index,
-        await getNonce(user),
+        await getNonce(user)
       )
       proofOutput = getProofOutput(filename)
     }
@@ -166,22 +168,22 @@ async function setup(
   const cDeposit = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    amount: bigint,
+    amount: bigint
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateUpdateProof(
-        await sdk.getCircuitInputsForDeposit(user.address, cPrivateKey, amount),
+        await sdk.getCircuitInputsForDeposit(user.address, cPrivateKey, amount)
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "deposit",
         user.index,
         await getNonce(user),
-        amount,
+        amount
       )
       proofOutput = getProofOutput(filename)
     }
@@ -193,26 +195,22 @@ async function setup(
   const cWithdraw = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    amount: bigint,
+    amount: bigint
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateUpdateProof(
-        await sdk.getCircuitInputsForWithdraw(
-          user.address,
-          cPrivateKey,
-          amount,
-        ),
+        await sdk.getCircuitInputsForWithdraw(user.address, cPrivateKey, amount)
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "withdraw",
         user.index,
         await getNonce(user),
-        amount,
+        amount
       )
       proofOutput = getProofOutput(filename)
     }
@@ -225,27 +223,27 @@ async function setup(
     _type: "hot" | "cold",
     user: typeof user1,
     to: string,
-    amount: bigint,
+    amount: bigint
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateTransferProof(
         await sdk.getCircuitInputsForTransfer(
           user.address,
           cPrivateKey,
           to,
-          amount,
-        ),
+          amount
+        )
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "transfer",
         user.index,
         await getNonce(user),
-        amount,
+        amount
       )
       proofOutput = getProofOutput(filename)
     }
@@ -257,19 +255,19 @@ async function setup(
   const cApply = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    pendingTransfersIndexes: number[],
+    pendingTransfersIndexes: number[]
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateApplyProof(
         await sdk.getCircuitInputsForApply(
           user.address,
           cPrivateKey,
-          pendingTransfersIndexes,
-        ),
+          pendingTransfersIndexes
+        )
       )
     } else {
       const filename = getProofFilenameForColdTest(
@@ -277,7 +275,7 @@ async function setup(
         user.index,
         await getNonce(user),
         undefined,
-        pendingTransfersIndexes,
+        pendingTransfersIndexes
       )
       proofOutput = getProofOutput(filename)
     }
@@ -291,12 +289,12 @@ async function setup(
     user: typeof user1,
     pendingTransfersIndexes: number[],
     to: string,
-    amount: bigint,
+    amount: bigint
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateApplyAndTransferProof(
         await sdk.getCircuitInputsForApplyAndTransfer(
@@ -304,8 +302,8 @@ async function setup(
           cPrivateKey,
           pendingTransfersIndexes,
           to,
-          amount,
-        ),
+          amount
+        )
       )
     } else {
       const filename = getProofFilenameForColdTest(
@@ -313,14 +311,14 @@ async function setup(
         user.index,
         await getNonce(user),
         undefined,
-        pendingTransfersIndexes,
+        pendingTransfersIndexes
       )
       proofOutput = getProofOutput(filename)
     }
     const params = sdk.getApplyAndTransferParams(
       to,
       pendingTransfersIndexes,
-      proofOutput,
+      proofOutput
     )
     await token.connect(user).cApplyAndTransfer(params)
     return proofOutput
@@ -329,30 +327,84 @@ async function setup(
   const cClaim = async (
     _type: "hot" | "cold",
     user: typeof user1,
-    indexToClaim: number,
+    indexToClaim: number
   ): Promise<ProofOutput> => {
     let proofOutput: ProofOutput
     if (_type === "hot") {
       const { cPrivateKey } = await SDK.deriveConfidentialKeys(
-        BigInt(user.privateKey),
+        BigInt(user.privateKey)
       )
       proofOutput = await sdk.generateClaimProof(
         await sdk.getCircuitInputsForClaim(
           user.address,
           cPrivateKey,
-          indexToClaim,
-        ),
+          indexToClaim
+        )
       )
     } else {
       const filename = getProofFilenameForColdTest(
         "claim",
         user.index,
-        await getNonce(user),
+        await getNonce(user)
       )
       proofOutput = getProofOutput(filename)
     }
     const params = sdk.getClaimParams(indexToClaim, proofOutput)
     await token.connect(user).cClaim(params)
+    return proofOutput
+  }
+
+  const cMint = async (
+    _type: "hot" | "cold",
+    user: typeof user1,
+    amount: bigint
+  ): Promise<ProofOutput> => {
+    let proofOutput: ProofOutput
+    if (_type === "hot") {
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
+      proofOutput = await sdk.generateUpdateProof(
+        await sdk.getCircuitInputsForMint(user.address, cPrivateKey, amount)
+      )
+    } else {
+      const filename = getProofFilenameForColdTest(
+        "mint",
+        user.index,
+        await getNonce(user),
+        amount
+      )
+      proofOutput = getProofOutput(filename)
+    }
+    const params = sdk.getMintParams(proofOutput)
+    await token.connect(user).cMint(params)
+    return proofOutput
+  }
+
+  const cBurn = async (
+    _type: "hot" | "cold",
+    user: typeof user1,
+    amount: bigint
+  ): Promise<ProofOutput> => {
+    let proofOutput: ProofOutput
+    if (_type === "hot") {
+      const { cPrivateKey } = await SDK.deriveConfidentialKeys(
+        BigInt(user.privateKey)
+      )
+      proofOutput = await sdk.generateUpdateProof(
+        await sdk.getCircuitInputsForBurn(user.address, cPrivateKey, amount)
+      )
+    } else {
+      const filename = getProofFilenameForColdTest(
+        "burn",
+        user.index,
+        await getNonce(user),
+        amount
+      )
+      proofOutput = getProofOutput(filename)
+    }
+    const params = sdk.getBurnParams(proofOutput)
+    await token.connect(user).cBurn(params)
     return proofOutput
   }
 
@@ -371,14 +423,14 @@ async function setup(
     user: number,
     nonce: bigint,
     amount?: bigint,
-    indexes?: number[],
+    indexes?: number[]
   ) => {
     const filename = getProofFilenameForColdTest(
       operation,
       user,
       nonce,
       amount,
-      indexes,
+      indexes
     )
     if (!fs.existsSync(path.join(PROOFS_DIR, `${filename}.json`))) {
       throw new Error(`Proof file ${filename} not found`)
@@ -387,10 +439,10 @@ async function setup(
   }
 
   const { cPrivateKey: user1CPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user1.privateKey),
+    BigInt(user1.privateKey)
   )
   const { cPrivateKey: user2CPrivateKey } = await SDK.deriveConfidentialKeys(
-    BigInt(user2.privateKey),
+    BigInt(user2.privateKey)
   )
 
   return {
@@ -407,9 +459,13 @@ async function setup(
     DEPOSIT_AMOUNT,
     WITHDRAW_AMOUNT,
     TRANSFER_AMOUNT,
+    MINT_AMOUNT,
+    BURN_AMOUNT,
     MOCK_PROOF_OUTPUT,
     SDK,
     cInit,
+    cMint,
+    cBurn,
     cDeposit,
     cWithdraw,
     cTransfer,
