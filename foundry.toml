@@ -1,0 +1,55 @@
+[profile.default]
+src = "src"
+script = "script"
+test = "test/foundry"
+out = "out/foundry"
+solc = "0.8.30"
+libs = ["node_modules", "lib"]
+ast = true
+ffi = true
+via_ir = true
+optimizer = true
+optimizer_runs = 100
+sparse_mode = true
+remappings = [
+    "forge-std/=node_modules/forge-std/src/",
+]
+fs_permissions = [
+    { access = "read-write", path = "./"},
+    { access = "none", path = ".env"}
+]
+
+[rpc_endpoints]
+anvil = "http://127.0.0.1:8545"
+arbitrum-sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+# arbitrum-sepolia = "http://127.0.0.1:8545"
+mainnet-sepolia = "https://0xrpc.io/sep"
+# mainnet-sepolia = "http://127.0.0.1:8545"
+
+[fmt]
+line_length = 120
+tab_width = 4
+wrap_comments = false
+int_types = "long"
+quote_style = "double"
+number_underscore = "thousands"
+single_line_statement_blocks = "single"
+multiline_func_header = "attributes_first"
+sort_imports = true
+contract_new_lines = false
+override_spacing = false
+bracket_spacing = false
+ignore = ["src/verifiers/*.sol"] # list of files to ignore separated by commas
+
+[lint]
+lint_on_build = false
+severity = ["high", "medium", "low", "info", "gas", "codesize"]
+exclude_lints = ["named-struct-fields", "unaliased-plain-import", "unwrapped-modifier-logic", "unsafe-cheatcode", "mixed-case-variable", "pascal-case-struct", "mixed-case-function"] # all rules https://protofire.github.io/solhint/docs/rules.html
+ignore = ["src/verifiers/*.sol", "test/foundry/BaseSetup.t.sol"] # list of files to ignore separated by commas
+
+[doc]
+out = "docs/generated"
+title = "Aqua Nox"
+repository = ""
+book = "./book.toml"
+ignore = [] # list of files to ignore separated by commas

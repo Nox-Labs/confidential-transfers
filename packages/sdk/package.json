@@ -1,0 +1,45 @@
+{
+  "name": "@noxlabs/confidential-transfers-sdk",
+  "version": "0.0.6",
+  "description": "SDK for EVM ERC20 Confidential Transfers",
+  "author": "Nox Labs",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "build": "rm -rf dist && npm run update && tsup src/index.ts --format cjs,esm --dts && mkdir -p dist/artifacts && cp -R src/artifacts/proofs-helpers dist/artifacts/proofs-helpers && cp -R src/artifacts/abi dist/artifacts/abi",
+    "update": "npm run update:abi -- ConfidentialTransfers ConfidentialTransfersBridgeable ConfidentialOFT && npm run update:typechain -- common src/ConfidentialTransfers src/ConfidentialTransfersBridgeable src/ConfidentialOFT test/utils/mock/MockConfidentialTransfers test/utils/mock/MockConfidentialTransfersBridgeable test/utils/mock/MockConfidentialOFT",
+    "update:abi": "node -e \"const fs=require('fs'); const p=require('path'); process.argv.slice(1).forEach(n => { const art=JSON.parse(fs.readFileSync('../../out/foundry/'+n+'.sol/'+n+'.json', 'utf8')); const abi=JSON.stringify(art.abi, null, 2); const d='src/artifacts/abi'; fs.mkdirSync(d, {recursive:true}); fs.writeFileSync(p.join(d, n+'.json'), abi); const camel=n.charAt(0).toLowerCase()+n.slice(1); const ts='export const '+camel+'Abi = '+abi+' as const\\n\\nexport type '+n+'Abi = typeof '+camel+'Abi\\n'; fs.writeFileSync(p.join(d, n+'.ts'), ts); console.log('Synced ABI:', n) })\"",
+    "update:typechain": "node -e \"const fs=require('fs'); const p=require('path'); process.argv.slice(1).forEach(f => { const s=p.join('../../out/hardhat/typechain', f + '.ts'); const d=p.join('src/artifacts/typechain', f + '.ts'); if(!fs.existsSync(s)) return console.error('Not found:', s); fs.mkdirSync(p.dirname(d), {recursive:true}); fs.copyFileSync(s, d); console.log('Synced Typechain:', f) })\""
+  },
+  "dependencies": {
+    "circomlibjs": "^0.1.7",
+    "ethers": "^6.15.0",
+    "snarkjs": "^0.7.5"
+  },
+  "devDependencies": {
+    "@types/circomlibjs": "^0.1.6",
+    "@types/node": "^24.10.1",
+    "@types/snarkjs": "^0.7.9",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3"
+  }
+}
