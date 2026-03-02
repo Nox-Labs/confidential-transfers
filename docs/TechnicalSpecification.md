@@ -438,6 +438,46 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 
 **Gas Efficiency**: Combines two operations (apply + transfer) into one proof, saving gas.
 
+### Circuit 6: Claim
+
+**Purpose**: Reclaim funds from a failed cross-chain transfer (bridgeable extension)
+
+**Private Inputs**:
+
+- `cPrivateKey`: Claimer's confidential private key
+- `cPrivateKeyUsedInTransfer`: The private key that was used in the original transfer (may differ from current key)
+- `oldAmount`: Claimer's current balance
+- `pendingTransferAmount`: Amount of the failed transfer
+
+**Public Inputs**:
+
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
+- `oldNonce`: Claimer's current nonce
+- `oldCommitment`: Claimer's current commitment
+- `pendingTransferNonce`: Nonce of the failed transfer
+- `pendingTransferCommitment`: Commitment of the failed transfer
+- `recipientPublicKeyX/Y`: Recipient's public key from the failed transfer
+
+**Public Outputs**:
+
+- `newCommitment`: Updated commitment
+- `eAmount`: Encrypted new amount
+
+**Constraints**:
+
+1. Verify claimer's old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce)])`
+2. Derive shared key: `sharedKey = ECDH(cPrivateKeyUsedInTransfer, recipientPublicKey)`
+3. Reconstruct transfer OTK: `pendingTransferOTK = Poseidon([sharedKey, pendingTransferNonce, chainId, contractAddress])`
+4. Verify transfer commitment: `pendingTransferCommitment == Poseidon([pendingTransferAmount, pendingTransferOTK])`
+5. Calculate new amount: `newAmount = oldAmount + pendingTransferAmount`
+6. Increment nonce: `newNonce = oldNonce + 1`
+7. Generate new state commitment and encryption
+
+**Security**: The circuit proves the claimer was the original sender by requiring knowledge of `cPrivateKeyUsedInTransfer` which produces the correct shared key to reconstruct the transfer commitment.
+
+---
+
 ### Smart Contract Implementation
 
 ### Contract Structure
@@ -635,6 +675,48 @@ pubSignals = [
 ]
 ```
 
+### Bridgeable Extension (`ConfidentialTransfersBridgeable`)
+
+The `ConfidentialTransfersBridgeable` contract extends `ConfidentialTransfers` with cross-chain transfer support. It adds:
+
+- **`cClaim`**: Reclaim funds from failed cross-chain transfers
+- **Failed transfer storage**: `failedCrossChainTransfers` mapping per sender
+- **Bridge hooks**: `_cSend` / `_cReceive` for cross-chain message handling
+
+#### `cClaim(ClaimParams calldata claimParams)`
+
+Allows the original sender to reclaim funds from a failed cross-chain transfer.
+
+**Preconditions**:
+
+- Sender account must be initialized
+- `claimParams.indexToClaim` must reference a valid failed transfer in `failedCrossChainTransfers[msg.sender]`
+
+**Postconditions**:
+
+- Sender's balance increases by the reclaimed amount
+- Nonce increments
+- The failed transfer is removed from storage
+
+**Proof Verification**:
+
+```solidity
+pubSignals = [
+    newCommitment,
+    eAmount,
+    chainId,
+    contractAddress,
+    oldNonce,
+    oldCommitment,
+    failedTransfer.pendingTransfer.payload.nonce,
+    failedTransfer.pendingTransfer.payload.commitment,
+    failedTransfer.recipientPubKeyX,
+    failedTransfer.recipientPubKeyY
+]
+```
+
+---
+
 ### Access Control
 
 #### Auditor Management
@@ -684,7 +766,9 @@ error MaxPendingTransfersReached();
        │                          │
        ├─ cWithdraw ──────────────┤
        │                          │
-       └─ cApplyAndTransfer ──────┘
+       ├─ cApplyAndTransfer ──────┤
+       │                          │
+       └─ cClaim (bridgeable) ────┘
 ```
 
 ### State Transition Rules
@@ -694,6 +778,7 @@ error MaxPendingTransfersReached();
 3. **Withdraw**: `balance' = balance - amount`, `nonce' = nonce + 1` (if `balance ≥ amount`)
 4. **Transfer**: `sender.balance' = sender.balance - amount`, `sender.nonce' = sender.nonce + 1`, `recipient.pendingTransfers += transfer`
 5. **Apply**: `balance' = balance + Σ(pendingAmounts)`, `nonce' = nonce + 1`, `pendingTransfers.remove(indexes)`
+6. **Claim** (bridgeable): `balance' = balance + failedTransferAmount`, `nonce' = nonce + 1`, `failedCrossChainTransfers.remove(index)`
 
 ### Invariants
 
@@ -740,6 +825,7 @@ error MaxPendingTransfersReached();
 | `cApply`            | ~400,000           | ~200,000      | ~600,000       |
 | `cWithdraw`         | ~300,000           | ~100,000      | ~400,000       |
 | `cApplyAndTransfer` | ~400,000           | ~250,000      | ~650,000       |
+| `cClaim`            | ~300,000           | ~100,000      | ~400,000       |
 
 **Note**: Actual gas costs depend on:
 
