@@ -55,6 +55,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         TransferPlonkVerifier transferVerifier;
         ApplyAndTransferPlonkVerifier applyAndTransferVerifier;
         mapping(address account => Account) accounts;
+        mapping(address sender => mapping(address recipient => bool allowed)) allowedSenders;
         mapping(uint256 pubKeyX => mapping(uint256 pubKeyY => address account)) pubKeyToAccount;
     }
 
@@ -206,6 +207,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         onlyInitialized(msg.sender)
         onlyInitialized(params.recipient)
         checkMaxPendingTransfers(params.recipient)
+        checkAllowedSender(msg.sender, params.recipient)
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
@@ -245,6 +247,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         onlyInitialized(msg.sender)
         onlyInitialized(params.recipient)
         checkMaxPendingTransfers(params.recipient)
+        checkAllowedSender(msg.sender, params.recipient)
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
@@ -296,8 +299,30 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit RequiredAuditorRemoved(msg.sender, auditor);
     }
 
-    /* INTERNAL VIRTUAL */
+    /**
+     * @notice Adds a sender that is allowed to send transfers to the account
+     * @param sender Address of the sender to add
+     */
+    function addAllowedSender(address sender) public virtual {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.allowedSenders[msg.sender][sender]) revert AllowedSenderAlreadyAdded();
+        $.accounts[msg.sender].allowedSenders.push(sender);
+        $.allowedSenders[msg.sender][sender] = true;
+        emit AllowedSenderAdded(msg.sender, sender);
+    }
 
+    /**
+     * @notice Removes a sender that is allowed to send transfers to the account
+     * @param sender Address of the sender to remove
+     */
+    function removeAllowedSender(address sender) public virtual {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        $.accounts[msg.sender].allowedSenders.remove(sender);
+        $.allowedSenders[msg.sender][sender] = false;
+        emit AllowedSenderRemoved(msg.sender, sender);
+    }
+
+    /* INTERNAL VIRTUAL */
     function _cUpdate(uint8 operation, UpdateParams calldata params)
         internal
         virtual
@@ -379,6 +404,14 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
     modifier checkRequiredAuditor(address account, AuditReport[] calldata auditReports) {
         _getCStorage().accounts[account].requiredAuditors.assertContains(auditReports);
+        _;
+    }
+
+    modifier checkAllowedSender(address sender, address recipient) {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.accounts[recipient].allowedSenders.length != 0 && !$.allowedSenders[sender][recipient]) {
+            revert NotAllowedSender();
+        }
         _;
     }
 

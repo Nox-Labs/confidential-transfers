@@ -18,6 +18,7 @@ struct Account {
     uint256 pubKeyY;
     Payload state;
     address[] requiredAuditors;
+    address[] allowedSenders;
     AuditReport[] auditReports;
     PendingTransfer[] pendingTransfers;
 }
@@ -117,6 +118,8 @@ interface IConfidentialTransfers {
 
     event RequiredAuditorAdded(address indexed account, address indexed auditor);
     event RequiredAuditorRemoved(address indexed account, address indexed auditor);
+    event AllowedSenderAdded(address indexed account, address indexed sender);
+    event AllowedSenderRemoved(address indexed account, address indexed sender);
 
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);
@@ -124,5 +127,7 @@ interface IConfidentialTransfers {
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
+    error AllowedSenderAlreadyAdded();
     error PublicKeyAlreadyUsed();
+    error NotAllowedSender();
 }

@@ -189,6 +189,17 @@ describe("ConfidentialTransfers", function () {
             f.token.connect(f.user1).cTransfer(params),
           ).to.be.revertedWithCustomError(f.token, "NotFound")
         })
+
+        it("Should revert if sender is not allowed to send transfers to the account", async function () {
+          await f.token.connect(f.user2).addAllowedSender(f.user2.address)
+          const params = f.sdk.getTransferParams(
+            f.user2.address,
+            f.MOCK_PROOF_OUTPUT,
+          )
+          await expect(
+            f.token.connect(f.user1).cTransfer(params),
+          ).to.be.revertedWithCustomError(f.token, "NotAllowedSender")
+        })
       })
     })
   })
