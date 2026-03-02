@@ -35,7 +35,7 @@ template ApplyAndTransfer(max) {
   signal input n;
   signal input pendingTransfersCommitments[max];
 
-  // --- Private Outputs ---
+  // --- Public Outputs ---
   signal output newCommitment;
   signal output eAmount;
   signal output transferCommitment;
