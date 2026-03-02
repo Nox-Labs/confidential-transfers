@@ -20,7 +20,7 @@ template ECDH() {
 
     // convert the private key to its bits representation
     var out[254];
-    out = Num2Bits(254)(privateKey);
+    out = Num2Bits_strict()(privateKey);
 
     // multiply the public key by the private key
     var mulFix[2];
