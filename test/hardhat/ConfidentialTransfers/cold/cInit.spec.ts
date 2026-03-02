@@ -119,6 +119,16 @@ describe("ConfidentialTransfers", function () {
           ).to.be.revertedWithCustomError(f.token, "InvalidArrayLength")
         })
 
+        it("Should revert if public key is already used", async function () {
+          await f.cInit("cold", f.user1)
+          const filename = f.getFilename("init", f.user1.index, 0n)
+          const proof = f.getProofOutput(filename)
+          const params = f.sdk.getInitParams(proof)
+          await expect(
+            f.token.connect(f.user2).cInit(params),
+          ).to.be.revertedWithCustomError(f.token, "PublicKeyAlreadyUsed")
+        })
+
         it("Should revert if required auditor is not found", async function () {
           await f.cInit("cold", f.user2)
           await f.token.connect(f.user1).addRequiredAuditor(f.user2.address)

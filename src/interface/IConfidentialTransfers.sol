@@ -124,4 +124,5 @@ interface IConfidentialTransfers {
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
+    error PublicKeyAlreadyUsed();
 }
