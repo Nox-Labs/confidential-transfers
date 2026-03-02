@@ -102,6 +102,7 @@ template ApplyAndTransfer(max) {
   sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
   signal sharedKey <== sharedKeyGenerator.sharedKey;
 
+  //! WARNING: Could be collision if sender and recipient make transfer to each other at the same nonce
   component transferStateGenerator = NewStateGenerator();
   transferStateGenerator.key <== sharedKey;
   transferStateGenerator.chainId <== chainId;
