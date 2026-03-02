@@ -50,7 +50,7 @@ describe("ConfidentialTransfers", function () {
         it("Should update auditor reports", async function () {
           const filename = getProofFilenameForColdTest(
             "init",
-            f.user1.index,
+            f.user2.index,
             await f.getNonce(f.user2),
           )
           const proof = f.getProofOutput(filename)
