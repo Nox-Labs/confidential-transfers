@@ -55,6 +55,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         TransferPlonkVerifier transferVerifier;
         ApplyAndTransferPlonkVerifier applyAndTransferVerifier;
         mapping(address account => Account) accounts;
+        mapping(uint256 pubKeyX => mapping(uint256 pubKeyY => address account)) pubKeyToAccount;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersStorage")) - 1)) & ~bytes32(uint256(0xff))
@@ -108,6 +109,9 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         account.pubKeyX = params.artifacts.outputs[0];
         account.pubKeyY = params.artifacts.outputs[1];
         account.auditReports = params.stateAuditReports;
+
+        if ($.pubKeyToAccount[account.pubKeyX][account.pubKeyY] != address(0)) revert PublicKeyAlreadyUsed();
+        $.pubKeyToAccount[account.pubKeyX][account.pubKeyY] = msg.sender;
 
         emit CInitialized(msg.sender, account.pubKeyX, account.pubKeyY, account.state, account.auditReports);
     }
@@ -327,6 +331,16 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
      */
     function getAccount(address account) public view returns (Account memory) {
         return _getCStorage().accounts[account];
+    }
+
+    /**
+     * @notice Gets the account information by confidential public key
+     * @param pubKeyX X coordinate of the public key
+     * @param pubKeyY Y coordinate of the public key
+     * @return account Address of the account or address(0) if not found
+     */
+    function getAccountByPublicKey(uint256 pubKeyX, uint256 pubKeyY) public view returns (address account) {
+        account = _getCStorage().pubKeyToAccount[pubKeyX][pubKeyY];
     }
 
     /**
