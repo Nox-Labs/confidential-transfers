@@ -71,7 +71,7 @@ template Transfer() {
   sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
   signal sharedKey <== sharedKeyGenerator.sharedKey;
 
-  // TODO: Could be collision if sender and recipient make transfer to each other at the same nonce
+  //! WARNING: Could be collision if sender and recipient make transfer to each other at the same nonce
   component transferStateGenerator = NewStateGenerator();
   transferStateGenerator.key <== sharedKey;
   transferStateGenerator.chainId <== chainId;
