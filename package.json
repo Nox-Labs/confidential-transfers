@@ -12,6 +12,7 @@
     "build:circuits": "bash ./circuits-build.sh",
     "build:circuits:all": "pnpm run build:circuits init && pnpm run build:circuits apply && pnpm run build:circuits update && pnpm run build:circuits transfer && pnpm run build:circuits applyAndTransfer && pnpm run build:circuits claim",
     "build:sdk": "cd packages/sdk && pnpm run build",
+    "build:go-sdk": "cd packages/go-sdk && make update",
     "audit:slither": "slither --exclude-dependencies --filter verifiers --checklist . > docs/audit/slither.md",
     "audit:aderyn": "aderyn -x verifiers -o docs/audit/aderyn.md",
     "coverage": "npx hardhat test mocha --grep 'Cold:' --coverage",
