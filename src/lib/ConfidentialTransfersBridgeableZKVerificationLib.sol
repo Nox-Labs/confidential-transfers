@@ -25,8 +25,8 @@ library ConfidentialTransfersBridgeableZKVerificationLib {
         FailedCrossChainTransfer storage failedTransfer
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
         uint256[10] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
             block.chainid,
             uint160(address(this)),
             account.state.nonce,
