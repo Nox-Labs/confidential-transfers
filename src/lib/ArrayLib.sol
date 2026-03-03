@@ -5,7 +5,8 @@ import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface
 import {FailedCrossChainTransfer} from "../interface/IConfidentialTransfersBridgeable.sol";
 
 library ArrayLib {
-    error DuplicateIndex();
+    error IndicesNotStrictlyAscending();
+    error IndexOutOfBounds();
     error NotFound();
 
     function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] calldata output) {
@@ -15,33 +16,31 @@ library ArrayLib {
         }
     }
 
+    /// @dev Requires indicesToRemove to be in strictly ascending order.
     function removeByIndices(PendingTransfer[] storage self, uint256[] calldata indicesToRemove) internal {
-        assertUnique(indicesToRemove, self.length);
-
-        uint256 len = self.length;
         uint256 numToRemove = indicesToRemove.length;
+        if (numToRemove == 0) return;
 
-        bool[] memory isRemoved = new bool[](len);
-        for (uint256 i = 0; i < numToRemove; i++) {
-            isRemoved[indicesToRemove[i]] = true;
+        for (uint256 i = 1; i < numToRemove; i++) {
+            if (indicesToRemove[i] <= indicesToRemove[i - 1]) revert IndicesNotStrictlyAscending();
         }
 
-        uint256 lastElementIndex = len - 1;
+        uint256 a = 0;
+        uint256 b = numToRemove;
+        uint256 j = self.length - 1;
 
-        for (uint256 i = 0; i < numToRemove; i++) {
-            uint256 indexToRemove = indicesToRemove[i];
-            if (indexToRemove >= len - numToRemove) continue;
+        if (indicesToRemove[b - 1] > j) revert IndexOutOfBounds();
 
-            while (lastElementIndex > 0 && isRemoved[lastElementIndex]) lastElementIndex--;
-
-            if (indexToRemove < lastElementIndex) {
-                self[indexToRemove] = self[lastElementIndex];
-                isRemoved[lastElementIndex] = true;
-                lastElementIndex--;
+        while (a < b) {
+            if (indicesToRemove[b - 1] == j) {
+                b--;
+            } else {
+                self[indicesToRemove[a]] = self[j];
+                a++;
             }
-        }
-
-        for (uint256 i = 0; i < numToRemove; i++) {
+            unchecked {
+                j--;
+            }
             self.pop();
         }
     }
@@ -69,15 +68,6 @@ library ArrayLib {
             if (self[i] == item) return true;
         }
         return false;
-    }
-
-    function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers) internal pure {
-        bool[] memory seen = new bool[](lengthOfPendingTransfers);
-        for (uint256 i = 0; i < indices.length; i++) {
-            uint256 index = indices[i];
-            if (seen[index]) revert DuplicateIndex();
-            seen[index] = true;
-        }
     }
 
     function assertContains(address[] storage self, AuditReport[] calldata auditReports) internal view {
