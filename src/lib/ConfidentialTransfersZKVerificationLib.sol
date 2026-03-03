@@ -30,7 +30,7 @@ library ConfidentialTransfersZKVerificationLib {
         checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [
             params.artifacts.outputs[0],
             params.artifacts.outputs[1],
@@ -53,7 +53,7 @@ library ConfidentialTransfersZKVerificationLib {
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
         if (operation != 0 && operation != 1) revert InvalidUpdateOperation();
 
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[8] memory pubSignals = [
             params.artifacts.outputs[0],
             params.artifacts.outputs[1],
@@ -81,7 +81,7 @@ library ConfidentialTransfersZKVerificationLib {
         checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState, Payload memory pendingTransferPackage)
     {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
             params.artifacts.outputs[0],
             params.artifacts.outputs[1],
@@ -134,7 +134,7 @@ library ConfidentialTransfersZKVerificationLib {
                 pubSignals[7 + i] = 0;
             }
         }
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
 
         if (!applyVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
 
@@ -156,7 +156,7 @@ library ConfidentialTransfersZKVerificationLib {
         uint256 n = params.pendingTransfersIndexes.length;
         uint256 maxIndex = account.pendingTransfers.length;
 
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[11 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
         pubSignals[0] = params.artifacts.outputs[0];
         pubSignals[1] = params.artifacts.outputs[1];

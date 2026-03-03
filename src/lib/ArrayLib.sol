@@ -8,10 +8,10 @@ library ArrayLib {
     error DuplicateIndex();
     error NotFound();
 
-    function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] memory output) {
+    function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] calldata output) {
         if (input.length != 24) revert IConfidentialTransfers.InvalidArrayLength(24, input.length);
         assembly {
-            calldatacopy(output, input.offset, mul(input.length, 0x20))
+            output := input.offset
         }
     }
 
