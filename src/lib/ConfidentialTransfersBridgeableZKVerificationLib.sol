@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {PlonkVerifier as ClaimPlonkVerifier} from "../verifiers/ClaimPlonkVerifier.sol";
 

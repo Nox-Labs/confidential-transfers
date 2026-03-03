@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface/IConfidentialTransfers.sol";
 import {FailedCrossChainTransfer} from "../interface/IConfidentialTransfersBridgeable.sol";
