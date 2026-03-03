@@ -20,7 +20,7 @@ template Update() {
     // --- Public Inputs ---
     signal input chainId;
     signal input contractAddress;
-    signal input operation; // 0 for deposit, 1 for withdraw // TODO: validate underflow 
+    signal input operation; // 0 for deposit, 1 for withdraw
     signal input amount;
     signal input oldNonce;
     signal input oldCommitment;
