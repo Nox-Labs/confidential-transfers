@@ -128,6 +128,7 @@ interface IConfidentialTransfers {
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
     error AllowedSenderAlreadyAdded();
+    error RequiredAuditorAlreadyAdded();
     error PublicKeyAlreadyUsed();
     error NotAllowedSender();
 }

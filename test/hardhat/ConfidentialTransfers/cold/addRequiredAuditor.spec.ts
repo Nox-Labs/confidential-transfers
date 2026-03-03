@@ -37,6 +37,16 @@ describe("ConfidentialTransfers", function () {
               .addRequiredAuditor(f.userUninitialized.address),
           ).to.be.revertedWithCustomError(f.token, "AccountNotInitialized")
         })
+
+        it("Should revert if the auditor is already added", async function () {
+          await f.token.connect(f.user1).addRequiredAuditor(f.user2.address)
+          await expect(
+            f.token.connect(f.user1).addRequiredAuditor(f.user2.address),
+          ).to.be.revertedWithCustomError(
+            f.token,
+            "RequiredAuditorAlreadyAdded",
+          )
+        })
       })
     })
   })
