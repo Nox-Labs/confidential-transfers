@@ -57,10 +57,10 @@ library ArrayLib {
             if (self[i] == item) {
                 self[i] = self[len - 1];
                 self.pop();
-                break;
+                return;
             }
         }
-        if (self.length == len) revert NotFound();
+        revert NotFound();
     }
 
     function contains(address[] storage self, address item) internal view returns (bool) {
