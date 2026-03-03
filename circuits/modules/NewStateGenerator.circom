@@ -24,7 +24,7 @@ template NewStateGenerator() {
     signal input chainId;
     signal input contractAddress;
 
-    signal output OTK;
+    signal output otk;
     signal output newCommitment;
     signal output newEncryptedAmount;
 
@@ -33,15 +33,15 @@ template NewStateGenerator() {
     otkGenerator.nonce <== newNonce;
     otkGenerator.chainId <== chainId;
     otkGenerator.contractAddress <== contractAddress;
-    OTK <== otkGenerator.out;
+    otk <== otkGenerator.out;
 
     component commitmentGenerator = CommitmentGenerator();
     commitmentGenerator.amount <== newAmount;
-    commitmentGenerator.otk <== OTK;
+    commitmentGenerator.otk <== otk;
     newCommitment <== commitmentGenerator.out;
 
     component encryption = Cipherer();
-    encryption.key <== OTK;
+    encryption.key <== otk;
     encryption.nonce <== newNonce;
     encryption.plaintext <== newAmount;
     newEncryptedAmount <== encryption.ciphertext;
