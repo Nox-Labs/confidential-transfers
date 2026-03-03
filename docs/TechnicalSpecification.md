@@ -92,7 +92,7 @@ Each user has:
 **Usage**:
 
 - Commitment generation: `Commitment = Poseidon([amount, blindingFactor])`
-- Blinding factor: `BF = Poseidon([cPrivateKey, nonce])`
+- Blinding factor: `BF = Poseidon([cPrivateKey, nonce, chainId, contractAddress])`
 - Key derivation: `cPrivateKey = Poseidon([entropy]) mod subOrder`
 
 ### 2. Baby Jubjub Curve
@@ -277,6 +277,11 @@ Main Circuit
 
 - `cPrivateKey`: User's confidential private key
 
+**Public Inputs**:
+
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
+
 **Public Outputs**:
 
 - `cPublicKey_X/Y`: User's confidential public key
@@ -300,6 +305,8 @@ Main Circuit
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `operation`: 0 = deposit, 1 = withdraw
 - `amount`: Deposit/withdraw amount
 - `oldNonce`: Current nonce
@@ -312,7 +319,7 @@ Main Circuit
 
 **Constraints**:
 
-1. Verify old state: `oldCommitment == Poseidon([oldAmount, OTK(oldNonce)])`
+1. Verify old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce, chainId, contractAddress)])`
 2. Validate operation: `operation ∈ {0, 1}`
 3. For withdraw: `amount ≤ oldAmount` (prevent overdraft)
 4. Calculate new amount: `newAmount = oldAmount + (1 - 2*operation) * amount`
@@ -339,6 +346,8 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `oldNonce`: Sender's current nonce
 - `oldCommitment`: Sender's current commitment
 - `recipientPublicKey_X/Y`: Recipient's confidential public key
@@ -374,6 +383,8 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `n`: Number of pending transfers to apply
 - `oldNonce`: Recipient's current nonce
 - `oldCommitment`: Recipient's current commitment
@@ -414,6 +425,8 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `oldNonce`: Current nonce
 - `oldCommitment`: Current commitment
 - `recipientPublicKey_X/Y`: Recipient's public key
@@ -466,7 +479,7 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 
 **Constraints**:
 
-1. Verify claimer's old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce)])`
+1. Verify claimer's old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce, chainId, contractAddress)])`
 2. Derive shared key: `sharedKey = ECDH(cPrivateKeyUsedInTransfer, recipientPublicKey)`
 3. Reconstruct transfer OTK: `pendingTransferOTK = Poseidon([sharedKey, pendingTransferNonce, chainId, contractAddress])`
 4. Verify transfer commitment: `pendingTransferCommitment == Poseidon([pendingTransferAmount, pendingTransferOTK])`
@@ -851,7 +864,7 @@ publicKey = cPrivateKey * G
 ```typescript
 // Deterministic One-Time Key (OTK)
 // Previously called blinding factor
-OTK = Poseidon([cPrivateKey, nonce])
+OTK = Poseidon([cPrivateKey, nonce, chainId, contractAddress])
 ```
 
 ### Commitment Generation
