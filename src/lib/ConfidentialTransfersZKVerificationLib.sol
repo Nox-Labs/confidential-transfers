@@ -32,10 +32,10 @@ library ConfidentialTransfersZKVerificationLib {
     {
         uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
-            params.artifacts.outputs[2],
-            params.artifacts.outputs[3],
+            params.artifacts.outputs[0], // cPublicKeyX
+            params.artifacts.outputs[1], // cPublicKeyY
+            params.artifacts.outputs[2], // newCommitment
+            params.artifacts.outputs[3], // eAmount
             block.chainid,
             uint160(address(this))
         ];
@@ -55,8 +55,8 @@ library ConfidentialTransfersZKVerificationLib {
 
         uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[8] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
             block.chainid,
             uint160(address(this)),
             operation,
@@ -83,10 +83,10 @@ library ConfidentialTransfersZKVerificationLib {
     {
         uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
-            params.artifacts.outputs[2],
-            params.artifacts.outputs[3],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
+            params.artifacts.outputs[2], // transferCommitment
+            params.artifacts.outputs[3], // transferEAmount
             block.chainid,
             uint160(address(this)),
             account.state.nonce,
@@ -114,8 +114,8 @@ library ConfidentialTransfersZKVerificationLib {
         uint256 maxIndex = account.pendingTransfers.length;
 
         uint256[7 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = params.artifacts.outputs[0];
-        pubSignals[1] = params.artifacts.outputs[1];
+        pubSignals[0] = params.artifacts.outputs[0]; // newCommitment
+        pubSignals[1] = params.artifacts.outputs[1]; // eAmount
         pubSignals[2] = block.chainid;
         pubSignals[3] = uint160(address(this));
         pubSignals[4] = n;
@@ -158,10 +158,10 @@ library ConfidentialTransfersZKVerificationLib {
 
         uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[11 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = params.artifacts.outputs[0];
-        pubSignals[1] = params.artifacts.outputs[1];
-        pubSignals[2] = params.artifacts.outputs[2];
-        pubSignals[3] = params.artifacts.outputs[3];
+        pubSignals[0] = params.artifacts.outputs[0]; // newCommitment
+        pubSignals[1] = params.artifacts.outputs[1]; // eAmount
+        pubSignals[2] = params.artifacts.outputs[2]; // transferCommitment
+        pubSignals[3] = params.artifacts.outputs[3]; // transferEAmount
         pubSignals[4] = block.chainid;
         pubSignals[5] = uint160(address(this));
         pubSignals[6] = account.state.nonce;
