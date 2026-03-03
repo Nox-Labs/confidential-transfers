@@ -64,6 +64,13 @@ library ArrayLib {
         if (self.length == len) revert NotFound();
     }
 
+    function contains(address[] storage self, address item) internal view returns (bool) {
+        for (uint256 i = 0; i < self.length; i++) {
+            if (self[i] == item) return true;
+        }
+        return false;
+    }
+
     function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers) internal pure {
         bool[] memory seen = new bool[](lengthOfPendingTransfers);
         for (uint256 i = 0; i < indices.length; i++) {
