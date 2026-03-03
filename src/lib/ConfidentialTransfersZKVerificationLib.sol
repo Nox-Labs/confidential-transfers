@@ -22,7 +22,7 @@ import {ArrayLib} from "./ArrayLib.sol";
 library ConfidentialTransfersZKVerificationLib {
     using ArrayLib for uint256[];
 
-    uint8 constant MAX_PENDING_TRANSFERS_APPLY = 10;
+    uint8 private constant MAX_PENDING_TRANSFERS_APPLY = 10;
 
     function cInit(InitPlonkVerifier initVerifier, InitParams calldata params)
         internal
