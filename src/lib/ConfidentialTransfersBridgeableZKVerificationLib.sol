@@ -24,7 +24,6 @@ library ConfidentialTransfersBridgeableZKVerificationLib {
         Account storage account,
         FailedCrossChainTransfer storage failedTransfer
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
             params.artifacts.outputs[0],
             params.artifacts.outputs[1],
@@ -38,7 +37,7 @@ library ConfidentialTransfersBridgeableZKVerificationLib {
             failedTransfer.recipientPubKeyY
         ];
 
-        if (!claimVerifier.verifyProof(proof, pubSignals)) {
+        if (!claimVerifier.verifyProof(params.artifacts.proof.toFixed24(), pubSignals)) {
             revert ConfidentialTransfersZKVerificationLib.ProofVerificationFailed();
         }
 
