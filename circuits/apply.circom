@@ -14,8 +14,8 @@ include "./modules/NewStateGenerator.circom";
  * @dev Verifies that the user knows the private key for the current state (oldCommitment)
  *      and validates the commitments of the pending transfers.
  *      Computes the new confidential state (newCommitment, eAmount) by summing up valid pending transfers.
- * @param max Maximum number of pending transfers that can be processed in one batch.
- */
+ * @param max Maximum number of pending transfers that can be processed in one batch. LessThan(32) supports inputs up to 2^32, so max should be less than 2^32.
+ */ 
 template Apply(max) {
     // --- Private Inputs ---
     signal input cPrivateKey;
