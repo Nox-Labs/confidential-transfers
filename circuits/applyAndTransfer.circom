@@ -15,7 +15,7 @@ include "./modules/NewStateGenerator.circom";
  *      1. Updates balance by applying pending transfers.
  *      2. Checks if sufficient balance exists for the outgoing transfer.
  *      3. Generates the new state for the sender and the transfer package for the recipient.
- * @param max Maximum number of pending transfers that can be processed.
+ * @param max Maximum number of pending transfers that can be processed. LessThan(32) supports inputs up to 2^32, so max should be less than 2^32.
  */
 template ApplyAndTransfer(max) {
   // --- Private Inputs ---
