@@ -30,6 +30,8 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     using ArrayLib for uint256[];
     using ArrayLib for FailedCrossChainTransfer[];
 
+    error InvalidClaimIndex();
+
     /// @custom:storage-location erc7201:confidentialTransfersBridgeableC
     struct ConfidentialTransfersBridgeableStorage {
         ClaimPlonkVerifier claimVerifier;
@@ -212,16 +214,19 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     {
         ConfidentialTransfersBridgeableStorage storage $ = _getCStorageBridgeable();
 
+        FailedCrossChainTransfer[] storage failed = $.failedCrossChainTransfers[msg.sender];
+        if (claimParams.indexToClaim >= failed.length) revert InvalidClaimIndex();
+
         Account storage account = _getCStorage().accounts[msg.sender];
 
         Payload memory newState = ConfidentialTransfersBridgeableZKVerificationLib.cClaim(
-            $.claimVerifier, claimParams, account, $.failedCrossChainTransfers[msg.sender][claimParams.indexToClaim]
+            $.claimVerifier, claimParams, account, failed[claimParams.indexToClaim]
         );
 
         account.state = newState;
         account.auditReports = claimParams.stateAuditReports;
 
-        $.failedCrossChainTransfers[msg.sender].remove(claimParams.indexToClaim);
+        failed.remove(claimParams.indexToClaim);
 
         emit CFailedTransferClaimed(msg.sender, newState, account.auditReports);
     }
