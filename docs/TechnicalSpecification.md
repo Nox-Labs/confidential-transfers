@@ -133,7 +133,7 @@ Commitment = Poseidon([amount, OTK])
 **Algorithm**:
 
 ```
-entropy = Poseidon([nonce])
+entropy = nonce
 keystream[i] = Poseidon([key, entropy + i])
 ciphertext[i] = plaintext[i] + keystream[i]  (field addition)
 ```
@@ -867,7 +867,7 @@ commitment = Poseidon([amount, OTK])
 // Encryption
 // Uses OTK as the key
 key = OTK
-entropy = Poseidon([nonce])
+entropy = nonce
 keystream = Poseidon([key, entropy])
 ciphertext = plaintext + keystream // Field addition
 
