@@ -36,12 +36,14 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
         mapping(address account => FailedCrossChainTransfer[]) failedCrossChainTransfers;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersBridgeableStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant BRIDGEABLE_STORAGE = 0x7418b332d832c6a4f05d896925d27af0f7ce65c6ddf4b2f3da48139ec802cc00;
+    bytes32 private constant BRIDGEABLE_STORAGE = keccak256(
+        abi.encode(uint256(keccak256("ConfidentialTransfersBridgeableStorage")) - 1)
+    ) & ~bytes32(uint256(0xff));
 
     function _getCStorageBridgeable() internal pure returns (ConfidentialTransfersBridgeableStorage storage $) {
+        bytes32 position = BRIDGEABLE_STORAGE;
         assembly {
-            $.slot := BRIDGEABLE_STORAGE
+            $.slot := position
         }
     }
 

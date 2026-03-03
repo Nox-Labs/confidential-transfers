@@ -61,11 +61,13 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
 
     // keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersStorage")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CONFIDENTIAL_TRANSFERS_STORAGE_POSITION =
-        0x74fe0b1f91feaaa95d609d18323a1d882fca941a422b86d407dc143fbb562900;
+        keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersStorage")) - 1)) & ~bytes32(uint256(0xff));
+    // 0x74fe0b1f91feaaa95d609d18323a1d882fca941a422b86d407dc143fbb562900;
 
     function _getCStorage() internal pure returns (ConfidentialTransfersStorage storage $) {
+        bytes32 position = CONFIDENTIAL_TRANSFERS_STORAGE_POSITION;
         assembly {
-            $.slot := CONFIDENTIAL_TRANSFERS_STORAGE_POSITION
+            $.slot := position
         }
     }
 
