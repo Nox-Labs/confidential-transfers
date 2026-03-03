@@ -1,12 +1,10 @@
 pragma circom 2.0.0;
 
 include "circomlib/circuits/comparators.circom";
-include "circomlib/circuits/babyjub.circom";
-
-include "./utils/SharedKeyGenerator.circom";
 
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
+include "./modules/TransferPackageGenerator.circom";
 
 /**
  * @title Transfer
@@ -36,24 +34,21 @@ template Transfer() {
   signal output transferCommitment;
   signal output transferEAmount;
 
-    // Verify that the sender knows the private key for the current state (oldCommitment)
-    component oldStateChecker = OldStateChecker();
-    oldStateChecker.key <== cPrivateKey;
-    oldStateChecker.chainId <== chainId;
-    oldStateChecker.contractAddress <== contractAddress;
-    oldStateChecker.oldAmount <== oldAmount;
-    oldStateChecker.oldNonce <== oldNonce;
-    oldStateChecker.oldCommitment <== oldCommitment;  
+  component oldStateChecker = OldStateChecker();
+  oldStateChecker.key <== cPrivateKey;
+  oldStateChecker.chainId <== chainId;
+  oldStateChecker.contractAddress <== contractAddress;
+  oldStateChecker.oldAmount <== oldAmount;
+  oldStateChecker.oldNonce <== oldNonce;
+  oldStateChecker.oldCommitment <== oldCommitment;
 
-    // Assert that the sender has enough confidential balance for the transfer
-    component checkEnoughBalance = LessEqThan(252);
-    checkEnoughBalance.in[0] <== transferAmount;
-    checkEnoughBalance.in[1] <== oldAmount;
-    checkEnoughBalance.out === 1;
+  component checkEnoughBalance = LessEqThan(252);
+  checkEnoughBalance.in[0] <== transferAmount;
+  checkEnoughBalance.in[1] <== oldAmount;
+  checkEnoughBalance.out === 1;
 
-    // Calculate new state properties
-    var newNonce = oldNonce + 1;
-    var newAmount = oldAmount - transferAmount;
+  var newNonce = oldNonce + 1;
+  var newAmount = oldAmount - transferAmount;
 
   component newStateGenerator = NewStateGenerator();
   newStateGenerator.key <== cPrivateKey;
@@ -64,22 +59,16 @@ template Transfer() {
   newCommitment <== newStateGenerator.newCommitment;
   eAmount <== newStateGenerator.newEncryptedAmount;
 
-  // Calculate shared key 
-  component sharedKeyGenerator = SharedKeyGenerator();
-  sharedKeyGenerator.privateKey <== cPrivateKey;
-  sharedKeyGenerator.publicKeyX <== recipientPublicKeyX;
-  sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
-  signal sharedKey <== sharedKeyGenerator.sharedKey;
-
-  //! WARNING: Could be collision if sender and recipient make transfer to each other at the same nonce
-  component transferStateGenerator = NewStateGenerator();
-  transferStateGenerator.key <== sharedKey;
-  transferStateGenerator.chainId <== chainId;
-  transferStateGenerator.contractAddress <== contractAddress;
-  transferStateGenerator.newAmount <== transferAmount;
-  transferStateGenerator.newNonce <== newNonce;
-  transferCommitment <== transferStateGenerator.newCommitment;
-  transferEAmount <== transferStateGenerator.newEncryptedAmount;
+  component transferPackage = TransferPackageGenerator();
+  transferPackage.privateKey <== cPrivateKey;
+  transferPackage.recipientPublicKeyX <== recipientPublicKeyX;
+  transferPackage.recipientPublicKeyY <== recipientPublicKeyY;
+  transferPackage.chainId <== chainId;
+  transferPackage.contractAddress <== contractAddress;
+  transferPackage.transferAmount <== transferAmount;
+  transferPackage.nonce <== newNonce;
+  transferCommitment <== transferPackage.transferCommitment;
+  transferEAmount <== transferPackage.transferEAmount;
 }
 
 component main { public [chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY] } = Transfer();

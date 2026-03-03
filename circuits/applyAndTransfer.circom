@@ -1,12 +1,11 @@
 pragma circom 2.0.0;
 
 include "circomlib/circuits/comparators.circom";
-include "circomlib/circuits/babyjub.circom";
-
-include "./utils/SharedKeyGenerator.circom";
 
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
+include "./modules/PendingTransfersVerifier.circom";
+include "./modules/TransferPackageGenerator.circom";
 
 /**
  * @title ApplyAndTransfer
@@ -15,7 +14,7 @@ include "./modules/NewStateGenerator.circom";
  *      1. Updates balance by applying pending transfers.
  *      2. Checks if sufficient balance exists for the outgoing transfer.
  *      3. Generates the new state for the sender and the transfer package for the recipient.
- * @param max Maximum number of pending transfers that can be processed. LessThan(32) supports inputs up to 2^32, so max should be less than 2^32.
+ * @param max Maximum number of pending transfers that can be processed. Must be less than 2^32 (LessThan(32) constraint).
  */
 template ApplyAndTransfer(max) {
   // --- Private Inputs ---
@@ -41,7 +40,7 @@ template ApplyAndTransfer(max) {
   signal output transferCommitment;
   signal output transferEAmount;
 
-  var newNonce = oldNonce + 1;        
+  var newNonce = oldNonce + 1;
 
   component oldStateChecker = OldStateChecker();
   oldStateChecker.key <== cPrivateKey;
@@ -51,34 +50,15 @@ template ApplyAndTransfer(max) {
   oldStateChecker.oldNonce <== oldNonce;
   oldStateChecker.oldCommitment <== oldCommitment;
 
-  component commitmentGenerators[max];
-  component otkGenerator[max];
-  component isLess[max];
-  signal intermediateAmount[max+1];
-    
-  intermediateAmount[0] <== oldAmount;
+  component pendingTransfers = PendingTransfersVerifier(max);
+  pendingTransfers.oldAmount <== oldAmount;
+  pendingTransfers.n <== n;
+  pendingTransfers.pendingTransfersAmounts <== pendingTransfersAmounts;
+  pendingTransfers.pendingTransfersOTKs <== pendingTransfersOTKs;
+  pendingTransfers.pendingTransfersCommitments <== pendingTransfersCommitments;
 
-  for (var i = 0; i < max; i++) {
-      isLess[i] = LessThan(32);
-      isLess[i].in[0] <== i;
-      isLess[i].in[1] <== n;
-      // isLess[i].out will be 1 if i < n, and 0 otherwise.
+  var tempAmount = pendingTransfers.totalAmount;
 
-      commitmentGenerators[i] = CommitmentGenerator();
-      commitmentGenerators[i].amount <== pendingTransfersAmounts[i];
-      commitmentGenerators[i].otk <== pendingTransfersOTKs[i];
-      
-      // Assertion:
-      // If isLess[i].out == 0 (this is a fake transfer), the difference can be any.
-      (pendingTransfersCommitments[i] - commitmentGenerators[i].out) * isLess[i].out === 0;
-
-      // Add the sum only for real transfers
-      intermediateAmount[i+1] <== intermediateAmount[i] + pendingTransfersAmounts[i] * isLess[i].out;
-  }
-
-  var tempAmount = intermediateAmount[max];
-
-  // Assert enough balance
   component checkEnoughBalance = LessEqThan(252);
   checkEnoughBalance.in[0] <== transferAmount;
   checkEnoughBalance.in[1] <== tempAmount;
@@ -95,22 +75,16 @@ template ApplyAndTransfer(max) {
   newCommitment <== newStateGenerator.newCommitment;
   eAmount <== newStateGenerator.newEncryptedAmount;
 
-  // Calculate shared key 
-  component sharedKeyGenerator = SharedKeyGenerator();
-  sharedKeyGenerator.privateKey <== cPrivateKey;
-  sharedKeyGenerator.publicKeyX <== recipientPublicKeyX;
-  sharedKeyGenerator.publicKeyY <== recipientPublicKeyY;
-  signal sharedKey <== sharedKeyGenerator.sharedKey;
-
-  //! WARNING: Could be collision if sender and recipient make transfer to each other at the same nonce
-  component transferStateGenerator = NewStateGenerator();
-  transferStateGenerator.key <== sharedKey;
-  transferStateGenerator.chainId <== chainId;
-  transferStateGenerator.contractAddress <== contractAddress;
-  transferStateGenerator.newAmount <== transferAmount;
-  transferStateGenerator.newNonce <== newNonce;
-  transferCommitment <== transferStateGenerator.newCommitment;
-  transferEAmount <== transferStateGenerator.newEncryptedAmount;
+  component transferPackage = TransferPackageGenerator();
+  transferPackage.privateKey <== cPrivateKey;
+  transferPackage.recipientPublicKeyX <== recipientPublicKeyX;
+  transferPackage.recipientPublicKeyY <== recipientPublicKeyY;
+  transferPackage.chainId <== chainId;
+  transferPackage.contractAddress <== contractAddress;
+  transferPackage.transferAmount <== transferAmount;
+  transferPackage.nonce <== newNonce;
+  transferCommitment <== transferPackage.transferCommitment;
+  transferEAmount <== transferPackage.transferEAmount;
 }
 
 component main { public [chainId, contractAddress, oldNonce, oldCommitment, recipientPublicKeyX, recipientPublicKeyY, n, pendingTransfersCommitments] } = ApplyAndTransfer(10);

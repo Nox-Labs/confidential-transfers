@@ -1,12 +1,8 @@
 pragma circom 2.0.0;
 
-include "circomlib/circuits/poseidon.circom";
-include "circomlib/circuits/comparators.circom";
-
-include "./utils/CommitmentGenerator.circom";
-
 include "./modules/OldStateChecker.circom";
 include "./modules/NewStateGenerator.circom";
+include "./modules/PendingTransfersVerifier.circom";
 
 /**
  * @title Apply
@@ -43,34 +39,14 @@ template Apply(max) {
     oldStateChecker.oldNonce <== oldNonce;
     oldStateChecker.oldCommitment <== oldCommitment;
 
-    component commitmentGenerators[max];
-    component otkGenerator[max];
-    component isLess[max];
-    signal intermediateAmount[max+1];
-    
-    intermediateAmount[0] <== oldAmount;
+    component pendingTransfers = PendingTransfersVerifier(max);
+    pendingTransfers.oldAmount <== oldAmount;
+    pendingTransfers.n <== n;
+    pendingTransfers.pendingTransfersAmounts <== pendingTransfersAmounts;
+    pendingTransfers.pendingTransfersOTKs <== pendingTransfersOTKs;
+    pendingTransfers.pendingTransfersCommitments <== pendingTransfersCommitments;
 
-    for (var i = 0; i < max; i++) {
-        isLess[i] = LessThan(32);
-        isLess[i].in[0] <== i;
-        isLess[i].in[1] <== n;
-        // isLess[i].out is a boolean mask: 1 if this transfer should be processed (i < n), 0 otherwise.
-
-        commitmentGenerators[i] = CommitmentGenerator();
-        commitmentGenerators[i].amount <== pendingTransfersAmounts[i];
-        commitmentGenerators[i].otk <== pendingTransfersOTKs[i];
-        
-        // Verification Logic:
-        // If isLess[i].out is 1 (active transfer): we assert that calculated commitment equals provided commitment.
-        // If isLess[i].out is 0 (padding transfer): the check is multiplied by 0, effectively skipping verification.
-        (pendingTransfersCommitments[i] - commitmentGenerators[i].out) * isLess[i].out === 0;
-
-        // Accumulator Logic:
-        // We add the amount to the intermediate sum ONLY if it's an active transfer (multiplied by mask).
-        intermediateAmount[i+1] <== intermediateAmount[i] + pendingTransfersAmounts[i] * isLess[i].out;
-    }
-    
-    var newAmount = intermediateAmount[max];
+    var newAmount = pendingTransfers.totalAmount;
     var newNonce = oldNonce + 1;
 
     component newStateGenerator = NewStateGenerator();
