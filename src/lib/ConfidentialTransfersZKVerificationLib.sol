@@ -51,7 +51,7 @@ library ConfidentialTransfersZKVerificationLib {
         Account storage account,
         uint8 operation
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
-        if (operation != 0 && operation != 1) revert InvalidUpdateOperation();
+        if (operation != 0 && operation != 1) revert InvalidUpdateOperation(operation);
 
         uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[8] memory pubSignals = [
@@ -202,6 +202,6 @@ library ConfidentialTransfersZKVerificationLib {
 
     error InvalidArrayLength(uint256 expected, uint256 actual);
     error ProofVerificationFailed();
-    error InvalidUpdateOperation();
+    error InvalidUpdateOperation(uint8 operation);
     error InvalidPendingTransfersIndexes();
 }

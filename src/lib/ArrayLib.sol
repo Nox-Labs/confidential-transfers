@@ -5,9 +5,9 @@ import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface
 import {FailedCrossChainTransfer} from "../interface/IConfidentialTransfersBridgeable.sol";
 
 library ArrayLib {
-    error IndicesNotStrictlyAscending();
-    error IndexOutOfBounds();
-    error NotFound();
+    error IndicesNotStrictlyAscending(uint256 index);
+    error IndexOutOfBounds(uint256 index);
+    error NotFound(address item);
 
     function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] calldata output) {
         if (input.length != 24) revert IConfidentialTransfers.InvalidArrayLength(24, input.length);
@@ -22,14 +22,14 @@ library ArrayLib {
         if (numToRemove == 0) return;
 
         for (uint256 i = 1; i < numToRemove; i++) {
-            if (indicesToRemove[i] <= indicesToRemove[i - 1]) revert IndicesNotStrictlyAscending();
+            if (indicesToRemove[i] <= indicesToRemove[i - 1]) revert IndicesNotStrictlyAscending(i);
         }
 
         uint256 a = 0;
         uint256 b = numToRemove;
         uint256 j = self.length - 1;
 
-        if (indicesToRemove[b - 1] > j) revert IndexOutOfBounds();
+        if (indicesToRemove[b - 1] > j) revert IndexOutOfBounds(indicesToRemove[b - 1]);
 
         while (a < b) {
             if (indicesToRemove[b - 1] == j) {
@@ -60,7 +60,7 @@ library ArrayLib {
                 return;
             }
         }
-        revert NotFound();
+        revert NotFound(item);
     }
 
     function contains(address[] storage self, address item) internal view returns (bool) {
@@ -72,7 +72,7 @@ library ArrayLib {
 
     function assertContains(address[] storage self, AuditReport[] calldata auditReports) internal view {
         if (self.length == 0) return;
-        if (self.length > auditReports.length) revert NotFound();
+        if (self.length > auditReports.length) revert NotFound(self[0]);
 
         for (uint256 i = 0; i < self.length; i++) {
             bool found = false;
@@ -83,7 +83,7 @@ library ArrayLib {
                 }
             }
 
-            if (!found) revert NotFound();
+            if (!found) revert NotFound(self[i]);
         }
     }
 }
