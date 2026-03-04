@@ -176,7 +176,7 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
         (uint8 msgType, bytes memory msgWithBridgeType) = abi.decode(message, (uint8, bytes));
         uint256 len = msgWithBridgeType.length;
         if (msgType == 0) {
-            // we use _message slice because _lzReceive expect that _message should be in calldata but msgPayload is in memory
+            // slice message (calldata) instead of msgWithBridgeType (memory) because _lzReceive expects calldata
             super._lzReceive(origin, guid, message[96:96 + len], executor, extraData);
         } else if (msgType == 1) {
             _cReceive(message[96:96 + len]);
