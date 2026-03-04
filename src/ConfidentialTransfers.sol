@@ -402,7 +402,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     }
 
     modifier onlyInitialized(address account) {
-        if (_getCStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized();
+        if (_getCStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized(account);
         _;
     }
 

@@ -123,7 +123,7 @@ interface IConfidentialTransfers {
 
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);
-    error AccountNotInitialized();
+    error AccountNotInitialized(address account);
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
