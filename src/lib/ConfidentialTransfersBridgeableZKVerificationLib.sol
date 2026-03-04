@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {PlonkVerifier as ClaimPlonkVerifier} from "../verifiers/ClaimPlonkVerifier.sol";
 
@@ -24,10 +24,9 @@ library ConfidentialTransfersBridgeableZKVerificationLib {
         Account storage account,
         FailedCrossChainTransfer storage failedTransfer
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
             block.chainid,
             uint160(address(this)),
             account.state.nonce,
@@ -38,7 +37,7 @@ library ConfidentialTransfersBridgeableZKVerificationLib {
             failedTransfer.recipientPubKeyY
         ];
 
-        if (!claimVerifier.verifyProof(proof, pubSignals)) {
+        if (!claimVerifier.verifyProof(params.artifacts.proof.toFixed24(), pubSignals)) {
             revert ConfidentialTransfersZKVerificationLib.ProofVerificationFailed();
         }
 

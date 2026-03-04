@@ -216,7 +216,10 @@ describe("ConfidentialTransfers", function () {
               f.token
                 .connect(f.user2)
                 .cApply(f.sdk.getApplyParams(indexes, proof)),
-            ).to.be.revertedWithCustomError(f.token, "DuplicateIndex")
+            ).to.be.revertedWithCustomError(
+              f.token,
+              "IndicesNotStrictlyAscending",
+            )
           })
 
           it("Should revert if indexes are out of bounds", async function () {

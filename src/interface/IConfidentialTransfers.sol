@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 struct Payload {
     uint256 nonce;
@@ -18,6 +18,7 @@ struct Account {
     uint256 pubKeyY;
     Payload state;
     address[] requiredAuditors;
+    address[] allowedSenders;
     AuditReport[] auditReports;
     PendingTransfer[] pendingTransfers;
 }
@@ -117,11 +118,17 @@ interface IConfidentialTransfers {
 
     event RequiredAuditorAdded(address indexed account, address indexed auditor);
     event RequiredAuditorRemoved(address indexed account, address indexed auditor);
+    event AllowedSenderAdded(address indexed account, address indexed sender);
+    event AllowedSenderRemoved(address indexed account, address indexed sender);
 
     error ProofVerificationFailed();
     error InvalidArrayLength(uint256 expected, uint256 actual);
-    error AccountNotInitialized();
+    error AccountNotInitialized(address account);
     error AccountAlreadyInitialized();
     error InvalidPendingTransfersIndexes();
     error MaxPendingTransfersReached();
+    error AllowedSenderAlreadyAdded();
+    error RequiredAuditorAlreadyAdded();
+    error PublicKeyAlreadyUsed();
+    error NotAllowedSender();
 }

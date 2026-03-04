@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {
     Account,
@@ -55,15 +55,19 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         TransferPlonkVerifier transferVerifier;
         ApplyAndTransferPlonkVerifier applyAndTransferVerifier;
         mapping(address account => Account) accounts;
+        mapping(address sender => mapping(address recipient => bool allowed)) allowedSenders;
+        mapping(uint256 pubKeyX => mapping(uint256 pubKeyY => address account)) pubKeyToAccount;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersStorage")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CONFIDENTIAL_TRANSFERS_STORAGE_POSITION =
-        0x74fe0b1f91feaaa95d609d18323a1d882fca941a422b86d407dc143fbb562900;
+        keccak256(abi.encode(uint256(keccak256("ConfidentialTransfersStorage")) - 1)) & ~bytes32(uint256(0xff));
+    // 0x74fe0b1f91feaaa95d609d18323a1d882fca941a422b86d407dc143fbb562900;
 
     function _getCStorage() internal pure returns (ConfidentialTransfersStorage storage $) {
+        bytes32 position = CONFIDENTIAL_TRANSFERS_STORAGE_POSITION;
         assembly {
-            $.slot := CONFIDENTIAL_TRANSFERS_STORAGE_POSITION
+            $.slot := position
         }
     }
 
@@ -108,6 +112,9 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         account.pubKeyX = params.artifacts.outputs[0];
         account.pubKeyY = params.artifacts.outputs[1];
         account.auditReports = params.stateAuditReports;
+
+        if ($.pubKeyToAccount[account.pubKeyX][account.pubKeyY] != address(0)) revert PublicKeyAlreadyUsed();
+        $.pubKeyToAccount[account.pubKeyX][account.pubKeyY] = msg.sender;
 
         emit CInitialized(msg.sender, account.pubKeyX, account.pubKeyY, account.state, account.auditReports);
     }
@@ -202,6 +209,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         onlyInitialized(msg.sender)
         onlyInitialized(params.recipient)
         checkMaxPendingTransfers(params.recipient)
+        checkAllowedSender(msg.sender, params.recipient)
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
@@ -241,6 +249,7 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         onlyInitialized(msg.sender)
         onlyInitialized(params.recipient)
         checkMaxPendingTransfers(params.recipient)
+        checkAllowedSender(msg.sender, params.recipient)
         checkRequiredAuditor(msg.sender, params.stateAuditReports)
         checkRequiredAuditor(msg.sender, params.transferAuditReports)
         checkRequiredAuditor(params.recipient, params.transferAuditReports)
@@ -279,7 +288,9 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
      * @param auditor Address of the auditor to add
      */
     function addRequiredAuditor(address auditor) public virtual onlyInitialized(auditor) {
-        _getCStorage().accounts[msg.sender].requiredAuditors.push(auditor);
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.accounts[msg.sender].requiredAuditors.contains(auditor)) revert RequiredAuditorAlreadyAdded();
+        $.accounts[msg.sender].requiredAuditors.push(auditor);
         emit RequiredAuditorAdded(msg.sender, auditor);
     }
 
@@ -292,8 +303,30 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
         emit RequiredAuditorRemoved(msg.sender, auditor);
     }
 
-    /* INTERNAL VIRTUAL */
+    /**
+     * @notice Adds a sender that is allowed to send transfers to the account
+     * @param sender Address of the sender to add
+     */
+    function addAllowedSender(address sender) public virtual {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.allowedSenders[msg.sender][sender]) revert AllowedSenderAlreadyAdded();
+        $.accounts[msg.sender].allowedSenders.push(sender);
+        $.allowedSenders[msg.sender][sender] = true;
+        emit AllowedSenderAdded(msg.sender, sender);
+    }
 
+    /**
+     * @notice Removes a sender that is allowed to send transfers to the account
+     * @param sender Address of the sender to remove
+     */
+    function removeAllowedSender(address sender) public virtual {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        $.accounts[msg.sender].allowedSenders.remove(sender);
+        $.allowedSenders[msg.sender][sender] = false;
+        emit AllowedSenderRemoved(msg.sender, sender);
+    }
+
+    /* INTERNAL VIRTUAL */
     function _cUpdate(uint8 operation, UpdateParams calldata params)
         internal
         virtual
@@ -330,6 +363,16 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     }
 
     /**
+     * @notice Gets the account information by confidential public key
+     * @param pubKeyX X coordinate of the public key
+     * @param pubKeyY Y coordinate of the public key
+     * @return account Address of the account or address(0) if not found
+     */
+    function getAccountByPublicKey(uint256 pubKeyX, uint256 pubKeyY) public view returns (address account) {
+        account = _getCStorage().pubKeyToAccount[pubKeyX][pubKeyY];
+    }
+
+    /**
      * @notice Retrieves confidential public keys for multiple accounts
      * @dev This function is useful when you need to get public keys while building cApply transaction (Multicall is overkill)
      * @param accounts Array of user addresses
@@ -359,12 +402,20 @@ abstract contract ConfidentialTransfers is IConfidentialTransfers, Initializable
     }
 
     modifier onlyInitialized(address account) {
-        if (_getCStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized();
+        if (_getCStorage().accounts[account].state.commitment == 0) revert AccountNotInitialized(account);
         _;
     }
 
     modifier checkRequiredAuditor(address account, AuditReport[] calldata auditReports) {
         _getCStorage().accounts[account].requiredAuditors.assertContains(auditReports);
+        _;
+    }
+
+    modifier checkAllowedSender(address sender, address recipient) {
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+        if ($.accounts[recipient].allowedSenders.length != 0 && !$.allowedSenders[sender][recipient]) {
+            revert NotAllowedSender();
+        }
         _;
     }
 

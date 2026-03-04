@@ -92,7 +92,7 @@ Each user has:
 **Usage**:
 
 - Commitment generation: `Commitment = Poseidon([amount, blindingFactor])`
-- Blinding factor: `BF = Poseidon([cPrivateKey, nonce])`
+- Blinding factor: `BF = Poseidon([cPrivateKey, nonce, chainId, contractAddress])`
 - Key derivation: `cPrivateKey = Poseidon([entropy]) mod subOrder`
 
 ### 2. Baby Jubjub Curve
@@ -133,7 +133,7 @@ Commitment = Poseidon([amount, OTK])
 **Algorithm**:
 
 ```
-entropy = Poseidon([nonce])
+entropy = nonce
 keystream[i] = Poseidon([key, entropy + i])
 ciphertext[i] = plaintext[i] + keystream[i]  (field addition)
 ```
@@ -277,6 +277,11 @@ Main Circuit
 
 - `cPrivateKey`: User's confidential private key
 
+**Public Inputs**:
+
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
+
 **Public Outputs**:
 
 - `cPublicKey_X/Y`: User's confidential public key
@@ -300,6 +305,8 @@ Main Circuit
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `operation`: 0 = deposit, 1 = withdraw
 - `amount`: Deposit/withdraw amount
 - `oldNonce`: Current nonce
@@ -312,7 +319,7 @@ Main Circuit
 
 **Constraints**:
 
-1. Verify old state: `oldCommitment == Poseidon([oldAmount, OTK(oldNonce)])`
+1. Verify old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce, chainId, contractAddress)])`
 2. Validate operation: `operation ∈ {0, 1}`
 3. For withdraw: `amount ≤ oldAmount` (prevent overdraft)
 4. Calculate new amount: `newAmount = oldAmount + (1 - 2*operation) * amount`
@@ -339,6 +346,8 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `oldNonce`: Sender's current nonce
 - `oldCommitment`: Sender's current commitment
 - `recipientPublicKey_X/Y`: Recipient's confidential public key
@@ -374,6 +383,8 @@ newAmount = oldAmount + (1 - 2*operation) * amount
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `n`: Number of pending transfers to apply
 - `oldNonce`: Recipient's current nonce
 - `oldCommitment`: Recipient's current commitment
@@ -414,6 +425,8 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 
 **Public Inputs**:
 
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
 - `oldNonce`: Current nonce
 - `oldCommitment`: Current commitment
 - `recipientPublicKey_X/Y`: Recipient's public key
@@ -437,6 +450,46 @@ intermediateAmount[i+1] = intermediateAmount[i] + pendingTransfersAmounts[i] * i
 6. Generate pending transfer using ECDH shared key
 
 **Gas Efficiency**: Combines two operations (apply + transfer) into one proof, saving gas.
+
+### Circuit 6: Claim
+
+**Purpose**: Reclaim funds from a failed cross-chain transfer (bridgeable extension)
+
+**Private Inputs**:
+
+- `cPrivateKey`: Claimer's confidential private key
+- `cPrivateKeyUsedInTransfer`: The private key that was used in the original transfer (may differ from current key)
+- `oldAmount`: Claimer's current balance
+- `pendingTransferAmount`: Amount of the failed transfer
+
+**Public Inputs**:
+
+- `chainId`: Chain identifier
+- `contractAddress`: Contract address
+- `oldNonce`: Claimer's current nonce
+- `oldCommitment`: Claimer's current commitment
+- `pendingTransferNonce`: Nonce of the failed transfer
+- `pendingTransferCommitment`: Commitment of the failed transfer
+- `recipientPublicKeyX/Y`: Recipient's public key from the failed transfer
+
+**Public Outputs**:
+
+- `newCommitment`: Updated commitment
+- `eAmount`: Encrypted new amount
+
+**Constraints**:
+
+1. Verify claimer's old state: `oldCommitment == Poseidon([oldAmount, OTK(cPrivateKey, oldNonce, chainId, contractAddress)])`
+2. Derive shared key: `sharedKey = ECDH(cPrivateKeyUsedInTransfer, recipientPublicKey)`
+3. Reconstruct transfer OTK: `pendingTransferOTK = Poseidon([sharedKey, pendingTransferNonce, chainId, contractAddress])`
+4. Verify transfer commitment: `pendingTransferCommitment == Poseidon([pendingTransferAmount, pendingTransferOTK])`
+5. Calculate new amount: `newAmount = oldAmount + pendingTransferAmount`
+6. Increment nonce: `newNonce = oldNonce + 1`
+7. Generate new state commitment and encryption
+
+**Security**: The circuit proves the claimer was the original sender by requiring knowledge of `cPrivateKeyUsedInTransfer` which produces the correct shared key to reconstruct the transfer commitment.
+
+---
 
 ### Smart Contract Implementation
 
@@ -635,6 +688,48 @@ pubSignals = [
 ]
 ```
 
+### Bridgeable Extension (`ConfidentialTransfersBridgeable`)
+
+The `ConfidentialTransfersBridgeable` contract extends `ConfidentialTransfers` with cross-chain transfer support. It adds:
+
+- **`cClaim`**: Reclaim funds from failed cross-chain transfers
+- **Failed transfer storage**: `failedCrossChainTransfers` mapping per sender
+- **Bridge hooks**: `_cSend` / `_cReceive` for cross-chain message handling
+
+#### `cClaim(ClaimParams calldata claimParams)`
+
+Allows the original sender to reclaim funds from a failed cross-chain transfer.
+
+**Preconditions**:
+
+- Sender account must be initialized
+- `claimParams.indexToClaim` must reference a valid failed transfer in `failedCrossChainTransfers[msg.sender]`
+
+**Postconditions**:
+
+- Sender's balance increases by the reclaimed amount
+- Nonce increments
+- The failed transfer is removed from storage
+
+**Proof Verification**:
+
+```solidity
+pubSignals = [
+    newCommitment,
+    eAmount,
+    chainId,
+    contractAddress,
+    oldNonce,
+    oldCommitment,
+    failedTransfer.pendingTransfer.payload.nonce,
+    failedTransfer.pendingTransfer.payload.commitment,
+    failedTransfer.recipientPubKeyX,
+    failedTransfer.recipientPubKeyY
+]
+```
+
+---
+
 ### Access Control
 
 #### Auditor Management
@@ -684,7 +779,9 @@ error MaxPendingTransfersReached();
        │                          │
        ├─ cWithdraw ──────────────┤
        │                          │
-       └─ cApplyAndTransfer ──────┘
+       ├─ cApplyAndTransfer ──────┤
+       │                          │
+       └─ cClaim (bridgeable) ────┘
 ```
 
 ### State Transition Rules
@@ -694,6 +791,7 @@ error MaxPendingTransfersReached();
 3. **Withdraw**: `balance' = balance - amount`, `nonce' = nonce + 1` (if `balance ≥ amount`)
 4. **Transfer**: `sender.balance' = sender.balance - amount`, `sender.nonce' = sender.nonce + 1`, `recipient.pendingTransfers += transfer`
 5. **Apply**: `balance' = balance + Σ(pendingAmounts)`, `nonce' = nonce + 1`, `pendingTransfers.remove(indexes)`
+6. **Claim** (bridgeable): `balance' = balance + failedTransferAmount`, `nonce' = nonce + 1`, `failedCrossChainTransfers.remove(index)`
 
 ### Invariants
 
@@ -740,6 +838,7 @@ error MaxPendingTransfersReached();
 | `cApply`            | ~400,000           | ~200,000      | ~600,000       |
 | `cWithdraw`         | ~300,000           | ~100,000      | ~400,000       |
 | `cApplyAndTransfer` | ~400,000           | ~250,000      | ~650,000       |
+| `cClaim`            | ~300,000           | ~100,000      | ~400,000       |
 
 **Note**: Actual gas costs depend on:
 
@@ -765,7 +864,7 @@ publicKey = cPrivateKey * G
 ```typescript
 // Deterministic One-Time Key (OTK)
 // Previously called blinding factor
-OTK = Poseidon([cPrivateKey, nonce])
+OTK = Poseidon([cPrivateKey, nonce, chainId, contractAddress])
 ```
 
 ### Commitment Generation
@@ -781,7 +880,7 @@ commitment = Poseidon([amount, OTK])
 // Encryption
 // Uses OTK as the key
 key = OTK
-entropy = Poseidon([nonce])
+entropy = nonce
 keystream = Poseidon([key, entropy])
 ciphertext = plaintext + keystream // Field addition
 

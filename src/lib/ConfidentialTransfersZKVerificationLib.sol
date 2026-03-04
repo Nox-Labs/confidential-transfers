@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {PlonkVerifier as ApplyAndTransferPlonkVerifier} from "../verifiers/ApplyAndTransferPlonkVerifier.sol";
 import {PlonkVerifier as ApplyPlonkVerifier} from "../verifiers/ApplyPlonkVerifier.sol";
@@ -22,7 +22,7 @@ import {ArrayLib} from "./ArrayLib.sol";
 library ConfidentialTransfersZKVerificationLib {
     using ArrayLib for uint256[];
 
-    uint8 constant MAX_PENDING_TRANSFERS_APPLY = 10;
+    uint8 private constant MAX_PENDING_TRANSFERS_APPLY = 10;
 
     function cInit(InitPlonkVerifier initVerifier, InitParams calldata params)
         internal
@@ -30,12 +30,12 @@ library ConfidentialTransfersZKVerificationLib {
         checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState)
     {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[6] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
-            params.artifacts.outputs[2],
-            params.artifacts.outputs[3],
+            params.artifacts.outputs[0], // cPublicKeyX
+            params.artifacts.outputs[1], // cPublicKeyY
+            params.artifacts.outputs[2], // newCommitment
+            params.artifacts.outputs[3], // eAmount
             block.chainid,
             uint160(address(this))
         ];
@@ -51,12 +51,12 @@ library ConfidentialTransfersZKVerificationLib {
         Account storage account,
         uint8 operation
     ) internal view checkArrayLength(2, params.artifacts.outputs.length) returns (Payload memory newState) {
-        if (operation != 0 && operation != 1) revert InvalidUpdateOperation();
+        if (operation != 0 && operation != 1) revert InvalidUpdateOperation(operation);
 
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[8] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
             block.chainid,
             uint160(address(this)),
             operation,
@@ -81,12 +81,12 @@ library ConfidentialTransfersZKVerificationLib {
         checkArrayLength(4, params.artifacts.outputs.length)
         returns (Payload memory newState, Payload memory pendingTransferPackage)
     {
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[10] memory pubSignals = [
-            params.artifacts.outputs[0],
-            params.artifacts.outputs[1],
-            params.artifacts.outputs[2],
-            params.artifacts.outputs[3],
+            params.artifacts.outputs[0], // newCommitment
+            params.artifacts.outputs[1], // eAmount
+            params.artifacts.outputs[2], // transferCommitment
+            params.artifacts.outputs[3], // transferEAmount
             block.chainid,
             uint160(address(this)),
             account.state.nonce,
@@ -114,8 +114,8 @@ library ConfidentialTransfersZKVerificationLib {
         uint256 maxIndex = account.pendingTransfers.length;
 
         uint256[7 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = params.artifacts.outputs[0];
-        pubSignals[1] = params.artifacts.outputs[1];
+        pubSignals[0] = params.artifacts.outputs[0]; // newCommitment
+        pubSignals[1] = params.artifacts.outputs[1]; // eAmount
         pubSignals[2] = block.chainid;
         pubSignals[3] = uint160(address(this));
         pubSignals[4] = n;
@@ -134,7 +134,7 @@ library ConfidentialTransfersZKVerificationLib {
                 pubSignals[7 + i] = 0;
             }
         }
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
 
         if (!applyVerifier.verifyProof(proof, pubSignals)) revert ProofVerificationFailed();
 
@@ -156,12 +156,12 @@ library ConfidentialTransfersZKVerificationLib {
         uint256 n = params.pendingTransfersIndexes.length;
         uint256 maxIndex = account.pendingTransfers.length;
 
-        uint256[24] memory proof = params.artifacts.proof.toFixed24();
+        uint256[24] calldata proof = params.artifacts.proof.toFixed24();
         uint256[11 + MAX_PENDING_TRANSFERS_APPLY] memory pubSignals;
-        pubSignals[0] = params.artifacts.outputs[0];
-        pubSignals[1] = params.artifacts.outputs[1];
-        pubSignals[2] = params.artifacts.outputs[2];
-        pubSignals[3] = params.artifacts.outputs[3];
+        pubSignals[0] = params.artifacts.outputs[0]; // newCommitment
+        pubSignals[1] = params.artifacts.outputs[1]; // eAmount
+        pubSignals[2] = params.artifacts.outputs[2]; // transferCommitment
+        pubSignals[3] = params.artifacts.outputs[3]; // transferEAmount
         pubSignals[4] = block.chainid;
         pubSignals[5] = uint160(address(this));
         pubSignals[6] = account.state.nonce;
@@ -202,6 +202,6 @@ library ConfidentialTransfersZKVerificationLib {
 
     error InvalidArrayLength(uint256 expected, uint256 actual);
     error ProofVerificationFailed();
-    error InvalidUpdateOperation();
+    error InvalidUpdateOperation(uint8 operation);
     error InvalidPendingTransfersIndexes();
 }

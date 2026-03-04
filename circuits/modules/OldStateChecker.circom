@@ -20,7 +20,7 @@ template OldStateChecker() {
     signal input oldNonce;
     signal input oldCommitment;
 
-    signal output oldOTK;
+    signal oldOTK;
 
     component otkGenerator = OTKGenerator();
     otkGenerator.key <== key;

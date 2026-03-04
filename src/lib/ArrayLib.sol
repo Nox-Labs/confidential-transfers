@@ -1,47 +1,46 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.0;
 
 import {AuditReport, IConfidentialTransfers, PendingTransfer} from "../interface/IConfidentialTransfers.sol";
 import {FailedCrossChainTransfer} from "../interface/IConfidentialTransfersBridgeable.sol";
 
 library ArrayLib {
-    error DuplicateIndex();
-    error NotFound();
+    error IndicesNotStrictlyAscending(uint256 index);
+    error IndexOutOfBounds(uint256 index);
+    error NotFound(address item);
 
-    function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] memory output) {
+    function toFixed24(uint256[] calldata input) internal pure returns (uint256[24] calldata output) {
         if (input.length != 24) revert IConfidentialTransfers.InvalidArrayLength(24, input.length);
         assembly {
-            calldatacopy(output, input.offset, mul(input.length, 0x20))
+            output := input.offset
         }
     }
 
+    /// @dev Requires indicesToRemove to be in strictly ascending order.
     function removeByIndices(PendingTransfer[] storage self, uint256[] calldata indicesToRemove) internal {
-        assertUnique(indicesToRemove, self.length);
-
-        uint256 len = self.length;
         uint256 numToRemove = indicesToRemove.length;
+        if (numToRemove == 0) return;
 
-        bool[] memory isRemoved = new bool[](len);
-        for (uint256 i = 0; i < numToRemove; i++) {
-            isRemoved[indicesToRemove[i]] = true;
+        for (uint256 i = 1; i < numToRemove; i++) {
+            if (indicesToRemove[i] <= indicesToRemove[i - 1]) revert IndicesNotStrictlyAscending(i);
         }
 
-        uint256 lastElementIndex = len - 1;
+        uint256 a = 0;
+        uint256 b = numToRemove;
+        uint256 j = self.length - 1;
 
-        for (uint256 i = 0; i < numToRemove; i++) {
-            uint256 indexToRemove = indicesToRemove[i];
-            if (indexToRemove >= len - numToRemove) continue;
+        if (indicesToRemove[b - 1] > j) revert IndexOutOfBounds(indicesToRemove[b - 1]);
 
-            while (lastElementIndex > 0 && isRemoved[lastElementIndex]) lastElementIndex--;
-
-            if (indexToRemove < lastElementIndex) {
-                self[indexToRemove] = self[lastElementIndex];
-                isRemoved[lastElementIndex] = true;
-                lastElementIndex--;
+        while (a < b) {
+            if (indicesToRemove[b - 1] == j) {
+                b--;
+            } else {
+                self[indicesToRemove[a]] = self[j];
+                a++;
             }
-        }
-
-        for (uint256 i = 0; i < numToRemove; i++) {
+            unchecked {
+                j--;
+            }
             self.pop();
         }
     }
@@ -58,24 +57,22 @@ library ArrayLib {
             if (self[i] == item) {
                 self[i] = self[len - 1];
                 self.pop();
-                break;
+                return;
             }
         }
-        if (self.length == len) revert NotFound();
+        revert NotFound(item);
     }
 
-    function assertUnique(uint256[] calldata indices, uint256 lengthOfPendingTransfers) internal pure {
-        bool[] memory seen = new bool[](lengthOfPendingTransfers);
-        for (uint256 i = 0; i < indices.length; i++) {
-            uint256 index = indices[i];
-            if (seen[index]) revert DuplicateIndex();
-            seen[index] = true;
+    function contains(address[] storage self, address item) internal view returns (bool) {
+        for (uint256 i = 0; i < self.length; i++) {
+            if (self[i] == item) return true;
         }
+        return false;
     }
 
     function assertContains(address[] storage self, AuditReport[] calldata auditReports) internal view {
         if (self.length == 0) return;
-        if (self.length > auditReports.length) revert NotFound();
+        if (self.length > auditReports.length) revert NotFound(self[0]);
 
         for (uint256 i = 0; i < self.length; i++) {
             bool found = false;
@@ -86,7 +83,7 @@ library ArrayLib {
                 }
             }
 
-            if (!found) revert NotFound();
+            if (!found) revert NotFound(self[i]);
         }
     }
 }
