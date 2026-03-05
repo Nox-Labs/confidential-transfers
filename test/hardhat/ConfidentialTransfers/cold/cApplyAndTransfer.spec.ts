@@ -341,20 +341,6 @@ describe("ConfidentialTransfers", function () {
             )
           })
 
-          it("Should revert if pending transfers indexes are empty", async function () {
-            const params = f.sdk.getApplyAndTransferParams(
-              f.user1.address,
-              [],
-              f.MOCK_PROOF_OUTPUT,
-            )
-            await expect(
-              f.token.connect(f.user2).cApplyAndTransfer(params),
-            ).to.be.revertedWithCustomError(
-              f.token,
-              "InvalidPendingTransfersIndexes",
-            )
-          })
-
           it("Should revert if required auditor is not found", async function () {
             await f.cTransfer(
               "cold",

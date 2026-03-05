@@ -20,6 +20,14 @@ template PendingTransfersVerifier(max) {
 
     signal output totalAmount;
 
+    component notZero = IsZero();
+    notZero.in <== n;
+    notZero.out === 0;
+
+    component checkN = LessEqThan(32);
+    checkN.in[0] <== n;
+    checkN.in[1] <== max;
+
     component commitmentGenerators[max];
     component isLess[max];
     signal intermediateAmount[max+1];

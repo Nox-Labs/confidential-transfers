@@ -235,17 +235,6 @@ describe("ConfidentialTransfers", function () {
             )
           })
 
-          it("Should revert if indexes are empty", async function () {
-            await expect(
-              f.token
-                .connect(f.user2)
-                .cApply(f.sdk.getApplyParams([], f.MOCK_PROOF_OUTPUT)),
-            ).to.be.revertedWithCustomError(
-              f.token,
-              "InvalidPendingTransfersIndexes",
-            )
-          })
-
           it("Should revert if pending transfers indexes are invalid", async function () {
             const params = f.sdk.getApplyParams([100], f.MOCK_PROOF_OUTPUT)
             await expect(
