@@ -157,19 +157,22 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         (recipient, pubKeyX, pubKeyY, pendingTransfer, extraData) = _decodeCMessage(cMsg);
 
-        Account storage account = _getCStorage().accounts[recipient];
+        ConfidentialTransfersStorage storage $ = _getCStorage();
+
+        Account storage account = $.accounts[recipient];
 
         // Check if the recipient's public key in the message matches the one registered on-chain.
         // This prevents sending funds to an address that doesn't match the intended recipient.
         bool isKeysMatch = account.pubKeyX == pubKeyX && account.pubKeyY == pubKeyY;
-        bool isSenderAllowed = account.allowedSenders.contains(pendingTransfer.sender);
+        bool isSenderAllowed =
+            $.accounts[recipient].allowedSenders.length == 0 || $.allowedSenders[pendingTransfer.sender][recipient];
         bool isPendingTransfersLimitReached = account.pendingTransfers.length >= MAX_PENDING_TRANSFERS_APPLY;
 
         bool success = isKeysMatch && isSenderAllowed && !isPendingTransfersLimitReached;
 
         if (success) {
             // Happy path: Recipient keys match. Handle the successful receive.
-            _getCStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
+            $.accounts[recipient].pendingTransfers.push(pendingTransfer);
         } else {
             // Failure path: Keys mismatch
             // Store in 'failedCrossChainTransfers' mapped to the SENDER.
