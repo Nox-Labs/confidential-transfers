@@ -194,7 +194,7 @@ library ConfidentialTransfersZKVerificationLib {
     }
 
     modifier checkApplyingPendingTransfersIndexes(Account storage account, uint256 n) {
-        if (n > account.pendingTransfers.length || n == 0) revert InvalidPendingTransfersIndexes();
+        if (n > account.pendingTransfers.length) revert InvalidPendingTransfersIndexes();
         _;
     }
 

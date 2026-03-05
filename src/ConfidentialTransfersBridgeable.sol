@@ -29,10 +29,11 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
     using ConfidentialTransfersBridgeableZKVerificationLib for *;
     using ArrayLib for uint256[];
     using ArrayLib for FailedCrossChainTransfer[];
+    using ArrayLib for address[];
 
     error InvalidClaimIndex();
 
-    /// @custom:storage-location erc7201:confidentialTransfersBridgeableC
+    /// @custom:storage-location erc7201:confidentialTransfersBridgeable
     struct ConfidentialTransfersBridgeableStorage {
         ClaimPlonkVerifier claimVerifier;
         mapping(address account => FailedCrossChainTransfer[]) failedCrossChainTransfers;
@@ -91,6 +92,9 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
      */
     function _cSend(TransferParams calldata transferParams)
         internal
+        onlyInitialized(msg.sender)
+        checkRequiredAuditor(msg.sender, transferParams.stateAuditReports)
+        checkRequiredAuditor(msg.sender, transferParams.transferAuditReports)
         returns (Payload memory newState, PendingTransfer memory pendingTransfer, bytes memory cMsg)
     {
         Payload memory pendingTransferPayload;
@@ -157,10 +161,14 @@ abstract contract ConfidentialTransfersBridgeable is ConfidentialTransfers, ICon
 
         // Check if the recipient's public key in the message matches the one registered on-chain.
         // This prevents sending funds to an address that doesn't match the intended recipient.
-        bool success = account.pubKeyX == pubKeyX && account.pubKeyY == pubKeyY;
+        bool isKeysMatch = account.pubKeyX == pubKeyX && account.pubKeyY == pubKeyY;
+        bool isSenderAllowed = account.allowedSenders.contains(pendingTransfer.sender);
+        bool isPendingTransfersLimitReached = account.pendingTransfers.length >= MAX_PENDING_TRANSFERS_APPLY;
+
+        bool success = isKeysMatch && isSenderAllowed && !isPendingTransfersLimitReached;
 
         if (success) {
-            // Happy path: Recipient keys match. Add to their pending transfers queue.
+            // Happy path: Recipient keys match. Handle the successful receive.
             _getCStorage().accounts[recipient].pendingTransfers.push(pendingTransfer);
         } else {
             // Failure path: Keys mismatch

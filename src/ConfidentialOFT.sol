@@ -101,9 +101,6 @@ contract ConfidentialOFT is ConfidentialTransfersBridgeable, OFT, IConfidentialO
     function cSend(CSendParams calldata params, MessagingFee calldata fee, address refundAddress)
         external
         payable
-        onlyInitialized(msg.sender)
-        checkRequiredAuditor(msg.sender, params.transferParams.stateAuditReports)
-        checkRequiredAuditor(msg.sender, params.transferParams.transferAuditReports)
         returns (MessagingReceipt memory msgReceipt)
     {
         (,, bytes memory cMsg) = _cSend(params.transferParams);
